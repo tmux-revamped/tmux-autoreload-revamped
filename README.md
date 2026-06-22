@@ -43,14 +43,14 @@ Press `prefix + I`. For event-driven reloads install [fswatch](https://github.co
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `@autoreload_revamped_files` | empty | extra files to watch beyond the loaded config, comma or space separated |
+| `@autoreload_revamped_files` | empty | the exact files to watch, comma or space separated, with `~` expanded; when set it replaces the default, so you can watch only your own config. Empty means watch every file tmux loaded |
 | `@autoreload_revamped_entrypoints` | loaded config | files to source on reload |
 | `@autoreload_revamped_interval` | `2` | seconds between checks in the polling fallback |
 | `@autoreload_revamped_quiet` | `0` | set to `1` to suppress the reload message |
 
 ## Compatibility
 
-Works on every tmux version TPM supports, 1.9 and up, on Linux (x86_64 and arm64) and macOS (Intel and Apple Silicon). The `#{config_files}` source list needs tmux 3.2 and up; on older tmux, name your files with `@autoreload_revamped_files`.
+Works on every tmux version TPM supports, 1.9 and up, on Linux (x86_64 and arm64) and macOS (Intel and Apple Silicon). The mtime check reads GNU `stat -c` first and BSD `stat -f` as a fallback, so it is correct on Linux, on native macOS, and on a Mac with GNU coreutils in `PATH`. The `#{config_files}` source list needs tmux 3.2 and up; on older tmux, name your files with `@autoreload_revamped_files`.
 
 ## Development
 

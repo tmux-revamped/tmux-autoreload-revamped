@@ -20,15 +20,25 @@ source "${PLUGIN_DIR}/src/lib/autoreload/autoreload.sh"
 _config_files() { tmux display-message -p '#{config_files}' 2>/dev/null; }
 _source_file() { tmux source-file "${1}" 2>/dev/null; }
 _message() { tmux display-message "${1}" 2>/dev/null; }
-_file_mtime() { stat -f '%m' "${1}" 2>/dev/null || stat -c '%Y' "${1}" 2>/dev/null; }
+# GNU stat (-c, Linux and GNU coreutils on macOS) first, BSD stat (-f, native
+# macOS) as the fallback. GNU stat reads -f as --file-system, which prints a
+# fluctuating free-block count; trying -c first avoids that false-change trap.
+_file_mtime() { stat -c '%Y' "${1}" 2>/dev/null || stat -f '%m' "${1}" 2>/dev/null; }
 _sleep() { sleep "${1}"; }
 _poll_continue() { true; }
 _exec_fswatch() { fswatch -o "$@" 2>/dev/null; }
 _exec_inotify() { inotifywait -q -e modify,move,create,delete "$@" >/dev/null 2>&1; }
 
-# ar_files -> the watched file list: the loaded config files plus any extras.
+# ar_files -> the watched file list. When @autoreload_revamped_files is set it is
+# the exact list, so you can watch only your own config; otherwise every file tmux
+# loaded. A leading ~ in a path is expanded to $HOME.
 ar_files() {
-  autoreload_split "$(_config_files) $(get_tmux_option "@autoreload_revamped_files" "")"
+  local custom raw p
+  custom="$(get_tmux_option "@autoreload_revamped_files" "")"
+  if [[ -n "${custom}" ]]; then raw="${custom}"; else raw="$(_config_files)"; fi
+  while IFS= read -r p; do
+    [[ -n "${p}" ]] && printf '%s\n' "$(autoreload_expand_path "${p}")"
+  done <<< "$(autoreload_split "${raw}")"
 }
 
 # ar_snapshot -> "<file> <mtime>" for every watched file, one per line.

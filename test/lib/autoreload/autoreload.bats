@@ -26,6 +26,12 @@ teardown() {
   [[ "$(autoreload_changed "a 1" "a 1")" == "0" ]]
 }
 
+@test "autoreload_expand_path expands a leading tilde" {
+  [[ "$(autoreload_expand_path "~/.tmux.conf")" == "${HOME}/.tmux.conf" ]]
+  [[ "$(autoreload_expand_path "~")" == "${HOME}" ]]
+  [[ "$(autoreload_expand_path "/abs/x")" == "/abs/x" ]]
+}
+
 @test "autoreload_split normalizes commas and whitespace and de-duplicates" {
   run autoreload_split "a.conf, b.conf  a.conf"
   [[ "${lines[0]}" == "a.conf" ]]

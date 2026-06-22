@@ -40,6 +40,18 @@ autoreload_split() {
   printf '%s' "${1}" | tr ',[:space:]' '\n' | awk 'NF && !seen[$0]++'
 }
 
+# autoreload_expand_path PATH -> PATH with a leading ~ expanded to $HOME, so a
+# watch entry like ~/.tmux.conf resolves to a real file.
+# shellcheck disable=SC2088 # the ~ patterns are matched literally, not expanded
+autoreload_expand_path() {
+  case "${1}" in
+    "~") printf '%s' "${HOME}" ;;
+    "~/"*) printf '%s/%s' "${HOME}" "${1#\~/}" ;;
+    *) printf '%s' "${1}" ;;
+  esac
+}
+
 export -f autoreload_select_watcher
 export -f autoreload_changed
 export -f autoreload_split
+export -f autoreload_expand_path

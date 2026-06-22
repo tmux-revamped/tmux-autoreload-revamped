@@ -119,6 +119,43 @@ teardown() {
   true
 }
 
+@test "autoreload.sh - file mtime reads GNU stat and ignores its -f filesystem output" {
+  unset _AUTORELOAD_REVAMPED_LOADED
+  source "${DISPATCHER}"
+  local bin="${BATS_TEST_TMPDIR}/gnu"
+  mkdir -p "${bin}"
+  printf '#!/bin/sh\n[ "$1" = "-c" ] && { echo 1700000000; exit 0; }\necho "Blocks: Total: 1 Free: $$"; exit 1\n' > "${bin}/stat"
+  chmod +x "${bin}/stat"
+  PATH="${bin}:${PATH}" run _file_mtime /any/file
+  [[ "${output}" == "1700000000" ]]
+}
+
+@test "autoreload.sh - file mtime falls back to BSD stat when -c is unsupported" {
+  unset _AUTORELOAD_REVAMPED_LOADED
+  source "${DISPATCHER}"
+  local bin="${BATS_TEST_TMPDIR}/bsd"
+  mkdir -p "${bin}"
+  printf '#!/bin/sh\n[ "$1" = "-f" ] && { echo 1700000000; exit 0; }\necho "stat: illegal option -- c" >&2; exit 1\n' > "${bin}/stat"
+  chmod +x "${bin}/stat"
+  PATH="${bin}:${PATH}" run _file_mtime /any/file
+  [[ "${output}" == "1700000000" ]]
+}
+
+@test "autoreload.sh - ar_files watches only the custom list when set, with ~ expansion" {
+  _config_files() { echo "/opt/etc/tmux.conf"; }
+  set_tmux_option "@autoreload_revamped_files" "~/.tmux.conf"
+  run ar_files
+  [[ "${output}" == "${HOME}/.tmux.conf" ]]
+  [[ "${output}" != *"/opt/etc/tmux.conf"* ]]
+}
+
+@test "autoreload.sh - ar_files watches every config file when no custom list" {
+  _config_files() { echo "/a.conf /b.conf"; }
+  run ar_files
+  [[ "${output}" == *"/a.conf"* ]]
+  [[ "${output}" == *"/b.conf"* ]]
+}
+
 @test "autoreload.sh - unknown subcommand produces no output" {
   run main bogus
   [[ -z "${output}" ]]
