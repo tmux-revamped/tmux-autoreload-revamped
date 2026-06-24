@@ -4,7 +4,7 @@
 
 **Edit your tmux config, save, and watch it reload itself, no key, no command.**
 
-[![Tests](https://github.com/gufranco/tmux-autoreload-revamped/actions/workflows/tests.yml/badge.svg)](https://github.com/gufranco/tmux-autoreload-revamped/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](CHANGELOG.md)
+[![Tests](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/tests.yml/badge.svg)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](CHANGELOG.md)
 
 </div>
 
@@ -12,7 +12,7 @@
 
 Watches every loaded tmux config file and sources it the moment it changes. It uses `fswatch` or `inotifywait` when they are installed, and a built-in polling loop otherwise, so it works out of the box with no extra dependency. One watcher per server, tracked by pid, so reloads never stack up.
 
-Built from [tmux-plugin-template](https://github.com/gufranco/tmux-plugin-template).
+Built from [tmux-plugin-template](https://github.com/tmux-revamped/tmux-plugin-template).
 
 <table>
 <tr>
@@ -34,7 +34,7 @@ Install it and forget it. Save your `~/.tmux.conf`, or any sourced file, and tmu
 With [TPM](https://github.com/tmux-plugins/tpm), add to `~/.tmux.conf`:
 
 ```tmux
-set -g @plugin 'gufranco/tmux-autoreload-revamped'
+set -g @plugin 'tmux-revamped/tmux-autoreload-revamped'
 ```
 
 Press `prefix + I`. For event-driven reloads install [fswatch](https://github.com/emcrisostomo/fswatch) or inotify-tools; without them the polling fallback takes over automatically.
