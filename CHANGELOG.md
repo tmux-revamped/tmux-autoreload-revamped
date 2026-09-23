@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- A watcher now stops when its server exits. The loop had no liveness test, so a
+  watcher outlived the server that started it and one leaked process accumulated
+  per server, which is visible on any machine that starts tmux servers in a loop.
+
+
 ## [1.1.0] - 2026-06-30
 
 ### Added

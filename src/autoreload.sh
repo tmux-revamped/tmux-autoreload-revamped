@@ -53,7 +53,21 @@ _file_mtime() { stat -c '%Y' "${1}" 2>/dev/null || stat -f '%m' "${1}" 2>/dev/nu
 _file_content() { cat "${1}" 2>/dev/null; }
 _hash_content() { cksum 2>/dev/null; }
 _sleep() { sleep "${1}"; }
-_poll_continue() { true; }
+# _poll_continue -> success while the server this watcher belongs to is still
+# running. tmux removes the socket when a server exits, so a missing socket is the
+# signal to stop. Without a liveness test the loop is `while true` and every
+# watcher outlives its server, which piles up one leaked process per server on any
+# machine that starts servers in a loop, such as a plugin test suite.
+_poll_continue() {
+  [[ -z "${AR_SOCKET:-}" ]] && return 0
+  [[ -S "${AR_SOCKET}" ]]
+}
+
+# _socket_path -> the socket of the server this call is talking to, empty when
+# there is none. A seam so the watcher's liveness test is drivable in tests.
+_socket_path() {
+  command tmux display-message -p '#{socket_path}' 2>/dev/null
+}
 _exec_fswatch() { fswatch -o "$@" 2>/dev/null | head -n1 >/dev/null; }
 _exec_inotify() { inotifywait -q -e modify,move,create,delete,close_write "$@" >/dev/null 2>&1; }
 _exec_entr() { printf '%s\n' "$@" | entr -d -n -p -z true >/dev/null 2>&1; }
@@ -368,6 +382,7 @@ _watch_entr() {
 }
 
 ar_watch() {
+  AR_SOCKET="$(_socket_path)"
   set_tmux_option "@autoreload_revamped_fail_count" "0"
   set_tmux_option "@autoreload_revamped_snapshot" "$(ar_snapshot)"
   set_tmux_option "@autoreload_revamped_hash" "$(ar_content_hash)"

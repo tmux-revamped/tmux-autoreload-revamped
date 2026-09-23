@@ -651,3 +651,28 @@ teardown() {
   [[ "${status}" -eq 0 ]]
   [[ -z "${output}" ]]
 }
+
+@test "watcher keeps polling while its server socket is present" {
+  AR_SOCKET="${BATS_TEST_TMPDIR}/sock"
+  command python3 -c 'import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1])' "${AR_SOCKET}"
+
+  run _poll_continue
+
+  [ "${status}" -eq 0 ]
+}
+
+@test "watcher stops when its server socket is gone" {
+  AR_SOCKET="${BATS_TEST_TMPDIR}/missing-sock"
+
+  run _poll_continue
+
+  [ "${status}" -ne 0 ]
+}
+
+@test "watcher keeps polling when no socket was captured" {
+  unset AR_SOCKET
+
+  run _poll_continue
+
+  [ "${status}" -eq 0 ]
+}
