@@ -654,11 +654,13 @@ teardown() {
 
 @test "watcher keeps polling while its server socket is present" {
   AR_SOCKET="${BATS_TEST_TMPDIR}/sock"
-  command python3 -c 'import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1])' "${AR_SOCKET}"
+  command tmux -S "${AR_SOCKET}" -f /dev/null new-session -d -s probe
 
   run _poll_continue
+  local result="${status}"
+  command tmux -S "${AR_SOCKET}" kill-server 2>/dev/null || true
 
-  [ "${status}" -eq 0 ]
+  [ "${result}" -eq 0 ]
 }
 
 @test "watcher stops when its server socket is gone" {
