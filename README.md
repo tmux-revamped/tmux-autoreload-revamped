@@ -8,9 +8,9 @@
 
 </div>
 
-**4** watcher backends · **fswatch · inotify · entr · poll** · **tmux 1.9 to 3.5** · **105** tests · **95%+** coverage
+**4** watcher backends · **fswatch · inotify · entr · poll** · **tmux 1.9 to 3.5** · **115** tests · **95%+** coverage
 
-Watches every loaded tmux config file, and the files they source, and applies your config the moment it really changes. It uses `fswatch`, `inotifywait`, or `entr` when they are installed, and a built-in polling loop otherwise, so it works out of the box with no extra dependency. One watcher per server, tracked by pid and self-healing, so reloads never stack up. A broken edit is caught, surfaced, and rolled back to the last working config instead of half-applying.
+Watches every loaded tmux config file, and the files they source, and applies your config the moment it really changes. It uses `fswatch`, `inotifywait`, or `entr` when they are installed, and a built-in polling loop otherwise, so it works out of the box with no extra dependency. One watcher per server, tracked by pid and self-healing, so reloads never stack up, and it exits with the server it belongs to. A broken edit is caught, surfaced, and rolled back to the last working config instead of half-applying.
 
 Built from [tmux-plugin-template](https://github.com/tmux-revamped/tmux-plugin-template).
 
@@ -24,7 +24,7 @@ Built from [tmux-plugin-template](https://github.com/tmux-revamped/tmux-plugin-t
 <td><strong>No noise</strong><br>Atomic-save aware, content-hash deduped so a no-op save is ignored, and deferred while you are mid-selection or at a prompt.</td>
 </tr>
 <tr>
-<td><strong>Self-healing</strong><br>One watcher per server, tracked by pid; a dead or stale watcher is replaced on the next load.</td>
+<td><strong>Self-healing</strong><br>One watcher per server, tracked by pid; a dead or stale watcher is replaced on the next load, and a watcher stops as soon as its server's socket is gone.</td>
 <td><strong>Tells you what changed</strong><br>Names the changed file, with optional desktop notification and a brief visual flash.</td>
 </tr>
 </table>

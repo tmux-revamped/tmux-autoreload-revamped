@@ -651,3 +651,30 @@ teardown() {
   [[ "${status}" -eq 0 ]]
   [[ -z "${output}" ]]
 }
+
+@test "watcher keeps polling while its server socket is present" {
+  AR_SOCKET="${BATS_TEST_TMPDIR}/sock"
+  command tmux -S "${AR_SOCKET}" -f /dev/null new-session -d -s probe
+
+  run _poll_continue
+  local result="${status}"
+  command tmux -S "${AR_SOCKET}" kill-server 2>/dev/null || true
+
+  [ "${result}" -eq 0 ]
+}
+
+@test "watcher stops when its server socket is gone" {
+  AR_SOCKET="${BATS_TEST_TMPDIR}/missing-sock"
+
+  run _poll_continue
+
+  [ "${status}" -ne 0 ]
+}
+
+@test "watcher keeps polling when no socket was captured" {
+  unset AR_SOCKET
+
+  run _poll_continue
+
+  [ "${status}" -eq 0 ]
+}
