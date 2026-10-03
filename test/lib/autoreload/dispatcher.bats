@@ -651,3 +651,24 @@ teardown() {
   [[ "${status}" -eq 0 ]]
   [[ -z "${output}" ]]
 }
+
+@test "_config_files drops config paths tmux lists that do not exist" {
+  source "${DISPATCHER}"
+  local real="${BATS_TEST_TMPDIR}/tmux.conf"
+  printf 'set -g mouse on\n' > "${real}"
+  export REAL_CONF="${real}"
+  _tmux() { printf '/nonexistent-a/tmux.conf,%s,/nonexistent-b/tmux.conf\n' "${REAL_CONF}"; }
+
+  run _config_files
+
+  [[ "${output}" == "${real}" ]]
+}
+
+@test "_config_files is empty when no listed config exists" {
+  source "${DISPATCHER}"
+  _tmux() { printf '/nonexistent-a/tmux.conf,/nonexistent-b/tmux.conf\n'; }
+
+  run _config_files
+
+  [[ -z "${output}" ]]
+}

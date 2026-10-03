@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Every reload failed on tmux 3.7, which lists default config paths that do
+  not exist in `#{config_files}`. Autoreload sourced the first missing one,
+  failed, and never reached the real config. Missing paths are now skipped.
+
 ## [1.1.0] - 2026-06-30
 
 ### Added

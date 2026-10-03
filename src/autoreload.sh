@@ -25,7 +25,14 @@ source "${PLUGIN_DIR}/src/lib/autoreload/autoreload.sh"
 
 # Single tmux seam. Every tmux interaction routes through it for one mock point.
 _tmux() { tmux "$@"; }
-_config_files() { _tmux display-message -p '#{config_files}' 2>/dev/null; }
+_config_files() {
+  local raw f out=""
+  raw="$(_tmux display-message -p '#{config_files}' 2>/dev/null)"
+  while IFS= read -r f; do
+    [[ -f "${f}" ]] && out="${out:+${out},}${f}"
+  done <<< "$(autoreload_split "${raw}")"
+  printf '%s\n' "${out}"
+}
 # Source a file and echo any tmux error text; the return code is tmux's own.
 _source_file() { { _tmux source-file "${1}" >/dev/null; } 2>&1; }
 _message() { _tmux display-message "${1}" >/dev/null 2>&1; }
