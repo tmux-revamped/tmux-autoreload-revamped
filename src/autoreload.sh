@@ -62,7 +62,7 @@ _path_exists() { [[ -e "${1}" ]]; }
 _hash_content() { cksum 2>/dev/null; }
 _sleep() { sleep "${1}"; }
 _poll_continue() { true; }
-_exec_fswatch() { fswatch -o "$@" 2>/dev/null | head -n1 >/dev/null; }
+_exec_fswatch() { fswatch -1 -o "$@" >/dev/null 2>&1; }
 _exec_inotify() { inotifywait -q -e modify,move,create,delete,close_write "$@" >/dev/null 2>&1; }
 _exec_entr() { printf '%s\n' "$@" | entr -d -n -p -z true >/dev/null 2>&1; }
 _pid_alive() { kill -0 "${1}" 2>/dev/null; }

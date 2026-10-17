@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exits with status 2 when a file appears in a watched directory, which
   the loop treated as a dead watcher. Status 2 now triggers a change
   check and re-arms the watcher.
+- The fswatch backend reloaded one event late. `fswatch -o | head -n1`
+  only ends when fswatch writes a second line and meets the closed pipe.
+  fswatch now runs with `-1` and exits after the first event.
 
 ## [1.1.0] - 2026-06-30
 

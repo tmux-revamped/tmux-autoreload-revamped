@@ -664,6 +664,18 @@ teardown() {
   [[ "${status}" -eq 0 ]]
 }
 
+@test "_exec_fswatch asks fswatch to exit after one event" {
+  # Arrange
+  source "${DISPATCHER}"
+  fswatch() { printf '%s\n' "$@" > "${BATS_TEST_TMPDIR}/fswatch-args"; }
+
+  # Act
+  run _exec_fswatch "/x"
+
+  # Assert
+  [[ "$(head -n1 "${BATS_TEST_TMPDIR}/fswatch-args")" == "-1" ]]
+}
+
 @test "_exec_inotify waits via a shadowed command" {
   source "${DISPATCHER}"
   inotifywait() { return 0; }
