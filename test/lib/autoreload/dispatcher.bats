@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+# shellcheck disable=SC1090,SC2034,SC2088
 
 load "${BATS_TEST_DIRNAME}/../../helpers.bash"
 
