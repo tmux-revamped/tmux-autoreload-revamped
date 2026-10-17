@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A broken edit made before the first successful reload had nothing to
   roll back to, because backups were written only after a reload
   succeeded. The watcher now snapshots the entrypoints when it starts.
+- A watched path containing a space was split into separate words
+  before reaching fswatch, inotifywait or entr. Targets are now passed
+  as an array, one argument per path.
 
 ## [1.1.0] - 2026-06-30
 

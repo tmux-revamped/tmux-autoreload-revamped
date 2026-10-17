@@ -421,6 +421,24 @@ teardown() {
   [[ "$(cat "${BATS_TEST_TMPDIR}/ev")" == "E" ]]
 }
 
+@test "_watch_fswatch passes a target path with a space as one argument" {
+  # Arrange
+  printf '0' > "${BATS_TEST_TMPDIR}/cnt"
+  _poll_continue() {
+    [[ "$(cat "${BATS_TEST_TMPDIR}/cnt")" == "0" ]] && { printf '1' > "${BATS_TEST_TMPDIR}/cnt"; return 0; }
+    return 1
+  }
+  ar_event_targets() { printf '%s\n' "/my dir/a.conf" "/my dir"; }
+  _exec_fswatch() { printf '%s\n' "$#" "$@" > "${BATS_TEST_TMPDIR}/args"; }
+  ar_event() { :; }
+
+  # Act
+  run _watch_fswatch
+
+  # Assert
+  [[ "$(cat "${BATS_TEST_TMPDIR}/args")" == "$(printf '%s\n' 2 "/my dir/a.conf" "/my dir")" ]]
+}
+
 @test "_watch_fswatch breaks when the watcher exits" {
   _poll_continue() { return 0; }
   _exec_fswatch() { return 1; }

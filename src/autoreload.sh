@@ -358,37 +358,28 @@ _watch_poll() {
   done
 }
 
-_watch_fswatch() {
-  local targets
+_watch_events() {
+  local exec_fn="${1}" rearm_rc="${2:-}" target rc
+  local -a targets
   while _poll_continue; do
-    targets="$(ar_event_targets | tr '\n' ' ')"
-    # shellcheck disable=SC2086 # word splitting the target list is intended
-    if _exec_fswatch ${targets}; then ar_event; else break; fi
-  done
-}
-
-_watch_inotify() {
-  local targets
-  while _poll_continue; do
-    targets="$(ar_event_targets | tr '\n' ' ')"
-    # shellcheck disable=SC2086 # word splitting the target list is intended
-    if _exec_inotify ${targets}; then ar_event; else break; fi
-  done
-}
-
-AR_ENTR_DIR_CHANGED=2
-
-_watch_entr() {
-  local targets rc
-  while _poll_continue; do
-    targets="$(ar_event_targets | tr '\n' ' ')"
-    # shellcheck disable=SC2086 # word splitting the target list is intended
-    _exec_entr ${targets}
+    targets=()
+    while IFS= read -r target; do
+      if [[ -n "${target}" ]]; then targets+=("${target}"); fi
+    done <<< "$(ar_event_targets)"
+    "${exec_fn}" "${targets[@]}"
     rc=$?
-    if [[ "${rc}" -ne 0 && "${rc}" -ne "${AR_ENTR_DIR_CHANGED}" ]]; then break; fi
+    if [[ "${rc}" -ne 0 && "${rc}" != "${rearm_rc}" ]]; then break; fi
     ar_event
   done
 }
+
+_watch_fswatch() { _watch_events _exec_fswatch; }
+
+_watch_inotify() { _watch_events _exec_inotify; }
+
+AR_ENTR_DIR_CHANGED=2
+
+_watch_entr() { _watch_events _exec_entr "${AR_ENTR_DIR_CHANGED}"; }
 
 ar_watch() {
   AR_SERVER_PID="$(_server_pid)"
