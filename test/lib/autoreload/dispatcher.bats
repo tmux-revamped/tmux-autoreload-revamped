@@ -751,6 +751,18 @@ teardown() {
   [[ "${status}" -eq 1 ]]
 }
 
+@test "ar_watch snapshots the entrypoints as the last-good backup" {
+  # Arrange
+  autoreload_select_watcher() { echo "poll"; }
+  _watch_poll() { :; }
+
+  # Act
+  run ar_watch
+
+  # Assert
+  [[ "$(cat "$(_backup_path main.conf)")" == "content:main.conf" ]]
+}
+
 @test "ar_watch records the server pid it was started for" {
   # Arrange
   _server_pid() { echo "777"; }

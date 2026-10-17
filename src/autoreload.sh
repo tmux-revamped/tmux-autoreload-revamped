@@ -395,6 +395,9 @@ ar_watch() {
   set_tmux_option "@autoreload_revamped_fail_count" "0"
   set_tmux_option "@autoreload_revamped_snapshot" "$(ar_snapshot)"
   set_tmux_option "@autoreload_revamped_hash" "$(ar_content_hash)"
+  if [[ "$(get_tmux_option "@autoreload_revamped_validate" "1")" == "1" ]]; then
+    ar_save_backups "$(ar_entrypoints)"
+  fi
   case "$(autoreload_select_watcher)" in
     fswatch)     _watch_fswatch ;;
     inotifywait) _watch_inotify ;;

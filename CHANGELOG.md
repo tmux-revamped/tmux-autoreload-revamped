@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gone or a different server answers on the socket.
 - The `reload` subcommand announced "tmux config reloaded" right after
   showing a source error. It now announces only a reload that succeeded.
+- A broken edit made before the first successful reload had nothing to
+  roll back to, because backups were written only after a reload
+  succeeded. The watcher now snapshots the entrypoints when it starts.
 
 ## [1.1.0] - 2026-06-30
 
