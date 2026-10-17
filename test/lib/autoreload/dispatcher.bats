@@ -690,15 +690,67 @@ teardown() {
   [[ "${status}" -eq 0 ]]
 }
 
-@test "_sleep, _poll_continue, _pid_alive, _kill_pid are callable" {
+@test "_kill_pid succeeds for a pid that is gone" {
+  # Arrange
   source "${DISPATCHER}"
-  _sleep() { :; }
-  run _sleep 0
-  run _poll_continue
-  [[ "${status}" -eq 0 ]]
-  run _pid_alive 999999
+
+  # Act
   run _kill_pid 999999
+
+  # Assert
   [[ "${status}" -eq 0 ]]
+}
+
+@test "_poll_continue keeps watching while the server pid is unchanged" {
+  # Arrange
+  source "${DISPATCHER}"
+  AR_SERVER_PID="777"
+  _server_pid() { echo "777"; }
+
+  # Act
+  run _poll_continue
+
+  # Assert
+  [[ "${status}" -eq 0 ]]
+}
+
+@test "_poll_continue stops once the server pid changes" {
+  # Arrange
+  source "${DISPATCHER}"
+  AR_SERVER_PID="777"
+  _server_pid() { echo "888"; }
+
+  # Act
+  run _poll_continue
+
+  # Assert
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "_poll_continue stops when the server cannot be reached" {
+  # Arrange
+  source "${DISPATCHER}"
+  AR_SERVER_PID="777"
+  _server_pid() { return 1; }
+
+  # Act
+  run _poll_continue
+
+  # Assert
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "ar_watch records the server pid it was started for" {
+  # Arrange
+  _server_pid() { echo "777"; }
+  autoreload_select_watcher() { echo "poll"; }
+  _watch_poll() { :; }
+
+  # Act
+  ar_watch
+
+  # Assert
+  [[ "${AR_SERVER_PID}" == "777" ]]
 }
 
 @test "_file_mtime reads GNU stat and ignores its -f filesystem output" {

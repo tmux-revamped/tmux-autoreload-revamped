@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The fswatch backend reloaded one event late. `fswatch -o | head -n1`
   only ends when fswatch writes a second line and meets the closed pipe.
   fswatch now runs with `-1` and exits after the first event.
+- A watcher outlived its tmux server and kept running. The watcher now
+  records the server pid when it starts and exits once the server is
+  gone or a different server answers on the socket.
 
 ## [1.1.0] - 2026-06-30
 

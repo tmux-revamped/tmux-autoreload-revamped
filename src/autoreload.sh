@@ -15,6 +15,7 @@
 AR_SELF="${BASH_SOURCE[0]}"
 PLUGIN_DIR="$(cd "$(dirname "${AR_SELF}")/.." && pwd)"
 AR_CACHE_DIR="${AR_CACHE_DIR:-${HOME}/.tmux/autoreload-revamped}"
+AR_SERVER_PID=""
 
 # shellcheck source=/dev/null
 source "${PLUGIN_DIR}/src/lib/tmux/tmux-ops.sh"
@@ -61,7 +62,8 @@ _file_content() { cat "${1}" 2>/dev/null; }
 _path_exists() { [[ -e "${1}" ]]; }
 _hash_content() { cksum 2>/dev/null; }
 _sleep() { sleep "${1}"; }
-_poll_continue() { true; }
+_poll_continue() { ar_server_alive; }
+_server_pid() { _tmux display-message -p '#{pid}' 2>/dev/null; }
 _exec_fswatch() { fswatch -1 -o "$@" >/dev/null 2>&1; }
 _exec_inotify() { inotifywait -q -e modify,move,create,delete,close_write "$@" >/dev/null 2>&1; }
 _exec_entr() { printf '%s\n' "$@" | entr -d -n -p -z true >/dev/null 2>&1; }
@@ -327,6 +329,12 @@ ar_event() {
 
 # --- watch backends. Each loop sits behind _poll_continue so a test breaks it --
 
+ar_server_alive() {
+  local now
+  now="$(_server_pid)" || return 1
+  [[ -n "${now}" && "${now}" == "${AR_SERVER_PID}" ]]
+}
+
 _poll_interval() {
   local i
   i=$(get_tmux_option "@autoreload_revamped_interval" "2")
@@ -382,6 +390,7 @@ _watch_entr() {
 }
 
 ar_watch() {
+  AR_SERVER_PID="$(_server_pid)"
   set_tmux_option "@autoreload_revamped_fail_count" "0"
   set_tmux_option "@autoreload_revamped_snapshot" "$(ar_snapshot)"
   set_tmux_option "@autoreload_revamped_hash" "$(ar_content_hash)"
