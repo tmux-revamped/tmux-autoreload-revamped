@@ -298,8 +298,9 @@ ar_should_defer() {
 ar_reload() {
   local list
   list="$(ar_entrypoints)"
-  ar_source_all "${list}"
-  ar_announce "${list}"
+  if ar_source_all "${list}"; then
+    ar_announce "${list}"
+  fi
 }
 
 # ar_event -> one change check. Reloads only when a watched file's content really

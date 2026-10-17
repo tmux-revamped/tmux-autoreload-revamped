@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A watcher outlived its tmux server and kept running. The watcher now
   records the server pid when it starts and exits once the server is
   gone or a different server answers on the socket.
+- The `reload` subcommand announced "tmux config reloaded" right after
+  showing a source error. It now announces only a reload that succeeded.
 
 ## [1.1.0] - 2026-06-30
 

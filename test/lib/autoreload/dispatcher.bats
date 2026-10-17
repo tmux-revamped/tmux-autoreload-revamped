@@ -310,6 +310,17 @@ teardown() {
   [[ "$(cat "${BATS_TEST_TMPDIR}/msg")" == *"reloaded"* ]]
 }
 
+@test "ar_reload does not announce a reload that failed" {
+  # Arrange
+  _source_file() { echo "syntax error"; return 1; }
+
+  # Act
+  run ar_reload
+
+  # Assert
+  [[ "$(cat "${BATS_TEST_TMPDIR}/msg")" != *"reloaded"* ]]
+}
+
 # --- ar_event branches -------------------------------------------------------
 
 @test "ar_event does nothing while paused" {
