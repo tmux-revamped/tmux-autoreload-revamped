@@ -58,6 +58,7 @@ _notify() {
 # avoids that false-change trap.
 _file_mtime() { stat -c '%Y' "${1}" 2>/dev/null || stat -f '%m' "${1}" 2>/dev/null; }
 _file_content() { cat "${1}" 2>/dev/null; }
+_path_exists() { [[ -e "${1}" ]]; }
 _hash_content() { cksum 2>/dev/null; }
 _sleep() { sleep "${1}"; }
 _poll_continue() { true; }
@@ -123,10 +124,17 @@ ar_files() {
   if [[ "$(get_tmux_option "@autoreload_revamped_discover" "1")" == "1" ]]; then
     { while IFS= read -r f; do
         [[ -n "${f}" ]] && ar_discover "${f}"
-      done <<< "${base}"; } | awk 'NF && !seen[$0]++'
+      done <<< "${base}"; } | awk 'NF && !seen[$0]++' | ar_existing_paths
   else
-    printf '%s\n' "${base}" | awk 'NF && !seen[$0]++'
+    printf '%s\n' "${base}" | awk 'NF && !seen[$0]++' | ar_existing_paths
   fi
+}
+
+ar_existing_paths() {
+  local f
+  while IFS= read -r f; do
+    if _path_exists "${f}"; then printf '%s\n' "${f}"; fi
+  done
 }
 
 # ar_event_targets -> what to hand a watcher to subscribe to: the watched files

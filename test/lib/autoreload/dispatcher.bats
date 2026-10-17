@@ -13,6 +13,7 @@ setup() {
   _config_files() { echo "main.conf"; }
   _file_mtime() { echo "100"; }
   _file_content() { echo "content:${1}"; }
+  _path_exists() { return 0; }
   _source_file() { echo "SOURCE:${1}" >> "${BATS_TEST_TMPDIR}/src"; }
   _message() { echo "MSG:${1}" >> "${BATS_TEST_TMPDIR}/msg"; }
   _flash() { echo "FLASH:${1}" >> "${BATS_TEST_TMPDIR}/flash"; }
@@ -77,6 +78,18 @@ teardown() {
   [[ "${output}" == *"main.conf"* ]]
   [[ "${output}" == *"extra.conf"* ]]
   [[ "$(printf '%s\n' "${output}" | grep -c 'main.conf')" == "1" ]]
+}
+
+@test "ar_files drops a sourced path that does not exist" {
+  # Arrange
+  _file_content() { case "${1}" in *main.conf) echo "source -q /missing.conf" ;; *) echo "" ;; esac; }
+  _path_exists() { [[ "${1}" != "/missing.conf" ]]; }
+
+  # Act
+  run ar_files
+
+  # Assert
+  [[ "${output}" == "main.conf" ]]
 }
 
 @test "ar_files skips discovery when disabled" {

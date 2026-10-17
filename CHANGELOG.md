@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   content hash was recorded before the defer check, so the follow-up
   event saw no change. The hash is now recorded only after a successful
   reload.
+- A `source -q` of a file that does not exist was handed to the watcher,
+  which exited on the missing path and stopped autoreload. Watched paths
+  that do not exist are now dropped.
 
 ## [1.1.0] - 2026-06-30
 
