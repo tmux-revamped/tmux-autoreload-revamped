@@ -10,7 +10,6 @@ setup() {
   export AR_CACHE_DIR="${BATS_TEST_TMPDIR}/cache"
   unset _AUTORELOAD_REVAMPED_LOADED
   source "${DISPATCHER}"
-  # Default seams: nothing real is watched, sourced, run, or notified.
   _config_files() { echo "main.conf"; }
   _file_mtime() { echo "100"; }
   _file_content() { echo "content:${1}"; }
@@ -26,8 +25,6 @@ teardown() {
   cleanup_test_environment
 }
 
-# --- structure ---------------------------------------------------------------
-
 @test "dispatcher functions are defined" {
   function_exists ar_watch
   function_exists ar_reload
@@ -35,8 +32,6 @@ teardown() {
   function_exists ar_ensure
   function_exists ar_status
 }
-
-# --- watched file set --------------------------------------------------------
 
 @test "ar_base_files uses the custom list with tilde expansion" {
   _config_files() { echo "/opt/etc/tmux.conf"; }
@@ -127,8 +122,6 @@ teardown() {
   _file_content() { echo "different"; }
   [[ "$(ar_content_hash)" != "${h1}" ]]
 }
-
-# --- reload pipeline ---------------------------------------------------------
 
 @test "ar_entrypoints defaults to the loaded config and honors the override" {
   run ar_entrypoints
@@ -322,8 +315,6 @@ teardown() {
   [[ "$(cat "${BATS_TEST_TMPDIR}/msg")" != *"reloaded"* ]]
 }
 
-# --- ar_event branches -------------------------------------------------------
-
 @test "ar_event does nothing while paused" {
   set_tmux_option "@autoreload_revamped_paused" "1"
   run ar_event
@@ -382,8 +373,6 @@ teardown() {
   run ar_event
   [[ "$(get_tmux_option "@autoreload_revamped_fail_count")" == "1" ]]
 }
-
-# --- watch backends ----------------------------------------------------------
 
 @test "_poll_interval defaults, accepts a valid value, and rejects junk" {
   [[ "$(_poll_interval)" == "2" ]]
@@ -525,8 +514,6 @@ teardown() {
   [[ "$(cat "${BATS_TEST_TMPDIR}/w")" == "ENTR" ]]
 }
 
-# --- pause / status / self-heal ---------------------------------------------
-
 @test "ar_pause and ar_resume flip the option and announce" {
   run ar_pause
   [[ "$(get_tmux_option "@autoreload_revamped_paused")" == "1" ]]
@@ -591,8 +578,6 @@ teardown() {
   [[ "$(get_tmux_option "@autoreload_revamped_pid")" == "9999" ]]
 }
 
-# --- main subcommands --------------------------------------------------------
-
 @test "main dispatches every subcommand" {
   ar_watch() { echo "watch" >> "${BATS_TEST_TMPDIR}/m"; }
   ar_reload() { echo "reload" >> "${BATS_TEST_TMPDIR}/m"; }
@@ -621,8 +606,6 @@ teardown() {
   run main bogus
   [[ -z "${output}" ]]
 }
-
-# --- seams (mocked; never a real watcher, source, or notification) ----------
 
 @test "_tmux forwards to tmux" {
   run _tmux show-option -gqv "@whatever"

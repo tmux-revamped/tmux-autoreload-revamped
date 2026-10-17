@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-#
-# autoreload.sh: command dispatcher for tmux-autoreload-revamped.
-#
-# Usage: autoreload.sh watch | reload | tick | event | pause | resume | toggle |
-#        status | ensure
-#
-# watch blocks, using fswatch, inotifywait, entr, or a polling fallback, and
-# sources the config whenever a watched file really changes. Every tmux call,
-# file read, watcher, sleep, and notification sits behind a seam, so the
-# change-detect-validate-reload logic is tested without a real watcher and
-# without reloading real config. Runtime state lives in tmux server options; the
-# only file writes are last-good backups under a cache dir for rollback.
 
 AR_SELF="${BASH_SOURCE[0]}"
 PLUGIN_DIR="$(cd "$(dirname "${AR_SELF}")/.." && pwd)"
@@ -22,9 +10,6 @@ source "${PLUGIN_DIR}/src/lib/tmux/tmux-ops.sh"
 # shellcheck source=/dev/null
 source "${PLUGIN_DIR}/src/lib/autoreload/autoreload.sh"
 
-# --- seams. Tests override these so nothing real is watched, sourced, or run ---
-
-# Single tmux seam. Every tmux interaction routes through it for one mock point.
 _tmux() { tmux "$@"; }
 _config_files() {
   local raw f out=""
@@ -34,12 +19,9 @@ _config_files() {
   done <<< "$(autoreload_split "${raw}")"
   printf '%s\n' "${out}"
 }
-# Source a file and echo any tmux error text; the return code is tmux's own.
 _source_file() { { _tmux source-file "${1}" >/dev/null; } 2>&1; }
 _message() { _tmux display-message "${1}" >/dev/null 2>&1; }
 _flash() { _tmux display-message "#[reverse]${1}#[default]" >/dev/null 2>&1; return 0; }
-# Busy when any pane is in copy-mode or view-mode, so a reload never yanks a
-# user out of a selection or a command prompt.
 _client_busy() {
   case "$(_tmux list-panes -a -F '#{pane_in_mode}' 2>/dev/null)" in
     *1*) return 0 ;;
@@ -54,9 +36,6 @@ _notify() {
   fi
   return 0
 }
-# GNU stat (-c) first, BSD stat (-f) as the fallback. GNU stat reads -f as
-# --file-system, which prints a fluctuating free-block count; trying -c first
-# avoids that false-change trap.
 _file_mtime() { stat -c '%Y' "${1}" 2>/dev/null || stat -f '%m' "${1}" 2>/dev/null; }
 _file_content() { cat "${1}" 2>/dev/null; }
 _path_exists() { [[ -e "${1}" ]]; }
@@ -75,8 +54,6 @@ _spawn_watcher() {
   echo "$!"
 }
 
-# --- backups for validate-then-apply rollback (cache dir, never a temp dir) ---
-
 _backup_dir() { printf '%s/backup' "${AR_CACHE_DIR}"; }
 _backup_path() { printf '%s/%s' "$(_backup_dir)" "$(printf '%s' "${1}" | tr -c 'A-Za-z0-9._-' '_')"; }
 _save_backup() {
@@ -90,10 +67,6 @@ _restore_backup() {
   return 0
 }
 
-# --- watched file set --------------------------------------------------------
-
-# ar_base_files -> the configured watch list: the exact @autoreload_revamped_files
-# when set, otherwise every file tmux loaded. A leading ~ expands to $HOME.
 ar_base_files() {
   local custom raw p
   custom="$(get_tmux_option "@autoreload_revamped_files" "")"
@@ -103,8 +76,6 @@ ar_base_files() {
   done <<< "$(autoreload_split "${raw}")"
 }
 
-# ar_discover FILE [DEPTH] -> FILE plus every file it sources, recursively and
-# bounded, so a newly added `source` directive gets watched too.
 ar_discover() {
   local start="${1}" depth="${2:-0}" child resolved
   [[ -n "${start}" ]] || return 0
@@ -118,8 +89,6 @@ ar_discover() {
   done <<< "$(_file_content "${start}" | autoreload_parse_sources)"
 }
 
-# ar_files -> the full de-duplicated watched set, with sourced includes folded in
-# when discovery is on.
 ar_files() {
   local base f
   base="$(ar_base_files)"
@@ -139,8 +108,6 @@ ar_existing_paths() {
   done
 }
 
-# ar_event_targets -> what to hand a watcher to subscribe to: the watched files
-# plus, for atomic-save handling, their parent directories.
 ar_event_targets() {
   local files atomic
   files="$(ar_files)"
@@ -150,7 +117,6 @@ ar_event_targets() {
   } | awk 'NF && !seen[$0]++'
 }
 
-# ar_snapshot -> "<file> <mtime>" for every watched file, one per line.
 ar_snapshot() {
   local f
   while IFS= read -r f; do
@@ -158,8 +124,6 @@ ar_snapshot() {
   done <<< "$(ar_files)"
 }
 
-# ar_content_hash -> one checksum over the concatenated content of every watched
-# file, so a no-op save that only bumps mtime can be told apart from a real edit.
 ar_content_hash() {
   local f
   { while IFS= read -r f; do
@@ -167,16 +131,10 @@ ar_content_hash() {
     done <<< "$(ar_files)"; } | _hash_content
 }
 
-# --- reload pipeline ---------------------------------------------------------
-
-# ar_entrypoints -> files to source on reload: @autoreload_revamped_entrypoints
-# when set, otherwise the loaded config list.
 ar_entrypoints() {
   autoreload_split "$(get_tmux_option "@autoreload_revamped_entrypoints" "$(_config_files)")"
 }
 
-# ar_closure_contains ENTRY CHANGED -> 0 when any changed file lives in ENTRY's
-# source closure, used to pick the affected subtree for a selective reload.
 ar_closure_contains() {
   local entry="${1}" changed="${2}" closure c
   closure="$(ar_discover "${entry}")"
@@ -187,8 +145,6 @@ ar_closure_contains() {
   return 1
 }
 
-# ar_affected_entrypoints CHANGED -> the entrypoints whose subtree owns a changed
-# file; falls back to every entrypoint when nothing matches.
 ar_affected_entrypoints() {
   local changed="${1}" entries e any=""
   entries="$(ar_entrypoints)"
@@ -200,8 +156,6 @@ ar_affected_entrypoints() {
   return 0
 }
 
-# ar_surface_error FILE ERR -> show the failing file and the captured tmux error
-# so a broken edit is visible instead of silently half-applied.
 ar_surface_error() {
   local f="${1}" err="${2}" msg
   if [[ -n "${err}" ]]; then
@@ -212,7 +166,6 @@ ar_surface_error() {
   _message "${msg}"
 }
 
-# ar_save_backups LIST -> snapshot each entrypoint's content as the new last-good.
 ar_save_backups() {
   local f
   while IFS= read -r f; do
@@ -220,9 +173,6 @@ ar_save_backups() {
   done <<< "${1}"
 }
 
-# ar_source_all LIST -> source each file. On a tmux error, surface it and, when
-# validation is on, roll back to the last-good backup; on full success, refresh
-# the backups. Returns non-zero when any file failed.
 ar_source_all() {
   local list="${1}" validate f err rc
   validate="$(get_tmux_option "@autoreload_revamped_validate" "1")"
@@ -240,7 +190,6 @@ ar_source_all() {
   return 0
 }
 
-# ar_apply CHANGED -> source the right entrypoints, selectively when enabled.
 ar_apply() {
   local changed="${1}" targets
   if [[ "$(get_tmux_option "@autoreload_revamped_selective" "0")" == "1" ]]; then
@@ -251,8 +200,6 @@ ar_apply() {
   ar_source_all "${targets}"
 }
 
-# ar_announce CHANGED -> the success surface: message naming the changed file,
-# plus an optional visual flash and desktop notification.
 ar_announce() {
   local changed="${1}" name count msg
   name="$(printf '%s' "${changed}" | head -n1)"
@@ -269,7 +216,6 @@ ar_announce() {
   return 0
 }
 
-# ar_record_failure -> bump the consecutive-failure counter that drives backoff.
 ar_record_failure() {
   local n
   n="$(get_tmux_option "@autoreload_revamped_fail_count" "0")"
@@ -277,7 +223,6 @@ ar_record_failure() {
   set_tmux_option "@autoreload_revamped_fail_count" "$(( n + 1 ))"
 }
 
-# ar_paused -> 0 when the user has paused autoreload.
 ar_paused() {
   [[ "$(get_tmux_option "@autoreload_revamped_paused" "0")" == "1" ]]
 }
@@ -288,13 +233,11 @@ ar_content_unchanged() {
   [[ -n "${prev}" && "${prev}" == "$(ar_content_hash)" ]]
 }
 
-# ar_should_defer -> 0 when a reload should wait because a client is mid-action.
 ar_should_defer() {
   [[ "$(get_tmux_option "@autoreload_revamped_defer" "1")" == "1" ]] || return 1
   _client_busy
 }
 
-# ar_reload -> the manual reload command: source every entrypoint and announce.
 ar_reload() {
   local list
   list="$(ar_entrypoints)"
@@ -303,8 +246,6 @@ ar_reload() {
   fi
 }
 
-# ar_event -> one change check. Reloads only when a watched file's content really
-# changed, the content is not a no-op duplicate, and no client is mid-action.
 ar_event() {
   if ar_paused; then return 0; fi
   local old new changed
@@ -327,8 +268,6 @@ ar_event() {
   fi
   return 0
 }
-
-# --- watch backends. Each loop sits behind _poll_continue so a test breaks it --
 
 ar_server_alive() {
   local now
@@ -397,8 +336,6 @@ ar_watch() {
   esac
 }
 
-# --- pause / status / self-heal ---------------------------------------------
-
 ar_pause() { set_tmux_option "@autoreload_revamped_paused" "1"; _message "autoreload paused"; }
 ar_resume() { set_tmux_option "@autoreload_revamped_paused" "0"; _message "autoreload resumed"; }
 ar_toggle() {
@@ -413,7 +350,6 @@ ar_status() {
     "${state}" "${pid:-none}" "$(autoreload_select_watcher)"
 }
 
-# ar_watcher_alive -> 0 when the tracked pid names a live watcher.
 ar_watcher_alive() {
   local pid
   pid="$(get_tmux_option "@autoreload_revamped_pid" "")"
@@ -421,8 +357,6 @@ ar_watcher_alive() {
   _pid_alive "${pid}"
 }
 
-# ar_ensure -> keep exactly one live watcher per server. A healthy one is left
-# alone; a dead or stale pid is cleaned up and a fresh watcher started.
 ar_ensure() {
   if ar_watcher_alive; then return 0; fi
   local pid newpid
