@@ -73,6 +73,18 @@ Press `prefix + I`. For event-driven reloads install [fswatch](https://github.co
 | `@autoreload_revamped_flash` | `0` | set to `1` for a brief reverse-video flash on reload |
 | `@autoreload_revamped_notify` | `0` | set to `1` for a desktop notification on reload (`osascript` or `notify-send`) |
 
+### Internal state
+
+The plugin manages these options itself. Do not set them.
+
+| Option | Holds |
+|--------|-------|
+| `@autoreload_revamped_pid` | pid of the running watcher, so a reload of the config keeps exactly one watcher per server |
+| `@autoreload_revamped_paused` | `1` while `pause` or `toggle` has stopped reacting to changes, `0` otherwise |
+| `@autoreload_revamped_snapshot` | one `path mtime` line per watched file, compared on each check to find the files that changed |
+| `@autoreload_revamped_hash` | checksum of the content of every watched file, so a save that only bumps the mtime does not reload |
+| `@autoreload_revamped_fail_count` | consecutive failed reloads, which grows the polling backoff up to `@autoreload_revamped_backoff_max` |
+
 ## Compatibility
 
 Needs tmux 3.2 or later, on Linux (x86_64 and arm64) and macOS (Intel and Apple Silicon). The mtime check reads GNU `stat -c` first and BSD `stat -f` as a fallback, so it is correct on Linux, on native macOS, and on a Mac with GNU coreutils in `PATH`. The default watch list and entrypoints come from `#{config_files}`, which tmux 3.2 added. The `entr` backend is used when neither `fswatch` nor `inotifywait` is present but `entr` is.
