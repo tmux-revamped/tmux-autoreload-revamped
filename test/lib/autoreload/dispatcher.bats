@@ -244,14 +244,38 @@ teardown() {
   [[ "${status}" -eq 0 ]]
 }
 
-@test "ar_content_unchanged dedupes a no-op save and stores fresh hashes" {
+@test "ar_content_unchanged matches content against the stored hash" {
+  # Arrange
+  set_tmux_option "@autoreload_revamped_hash" "$(ar_content_hash)"
+
+  # Act
   run ar_content_unchanged
-  [[ "${status}" -eq 1 ]]
-  run ar_content_unchanged
+
+  # Assert
   [[ "${status}" -eq 0 ]]
+}
+
+@test "ar_content_unchanged reports edited content as changed" {
+  # Arrange
+  set_tmux_option "@autoreload_revamped_hash" "$(ar_content_hash)"
   _file_content() { echo "changed"; }
+
+  # Act
   run ar_content_unchanged
+
+  # Assert
   [[ "${status}" -eq 1 ]]
+}
+
+@test "ar_content_unchanged does not store the hash it compares" {
+  # Arrange
+  _file_content() { echo "edited"; }
+
+  # Act
+  run ar_content_unchanged
+
+  # Assert
+  [[ -z "$(get_tmux_option "@autoreload_revamped_hash")" ]]
 }
 
 @test "ar_should_defer waits only when defer is on and a client is busy" {
@@ -300,6 +324,22 @@ teardown() {
   _client_busy() { return 0; }
   run ar_event
   [[ ! -f "${BATS_TEST_TMPDIR}/src" ]]
+}
+
+@test "ar_event applies a deferred edit on the follow-up event" {
+  # Arrange
+  set_tmux_option "@autoreload_revamped_snapshot" "main.conf 99"
+  set_tmux_option "@autoreload_revamped_hash" "stale"
+  _client_busy() { return 0; }
+  ar_event
+  _client_busy() { return 1; }
+
+  # Act
+  run ar_event
+
+  # Assert
+  [[ "$(cat "${BATS_TEST_TMPDIR}/src")" == *"SOURCE:main.conf"* ]] || false
+  [[ "$(get_tmux_option "@autoreload_revamped_hash")" == "$(ar_content_hash)" ]]
 }
 
 @test "ar_event reloads, resets failures, and announces on a real change" {

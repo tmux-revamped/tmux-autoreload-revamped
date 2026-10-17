@@ -272,17 +272,10 @@ ar_paused() {
   [[ "$(get_tmux_option "@autoreload_revamped_paused" "0")" == "1" ]]
 }
 
-# ar_content_unchanged -> 0 when the watched content matches the stored hash (an
-# mtime-only no-op save). Stores the fresh hash whenever content differs.
 ar_content_unchanged() {
-  local prev cur
+  local prev
   prev="$(get_tmux_option "@autoreload_revamped_hash" "")"
-  cur="$(ar_content_hash)"
-  if [[ -n "${prev}" && "${prev}" == "${cur}" ]]; then
-    return 0
-  fi
-  set_tmux_option "@autoreload_revamped_hash" "${cur}"
-  return 1
+  [[ -n "${prev}" && "${prev}" == "$(ar_content_hash)" ]]
 }
 
 # ar_should_defer -> 0 when a reload should wait because a client is mid-action.
@@ -316,6 +309,7 @@ ar_event() {
   if ar_apply "${changed}"; then
     set_tmux_option "@autoreload_revamped_fail_count" "0"
     set_tmux_option "@autoreload_revamped_snapshot" "$(ar_snapshot)"
+    set_tmux_option "@autoreload_revamped_hash" "$(ar_content_hash)"
     ar_announce "${changed}"
   else
     ar_record_failure
