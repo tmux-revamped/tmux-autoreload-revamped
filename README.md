@@ -8,7 +8,7 @@
 
 </div>
 
-**4** watcher backends · **fswatch · inotify · entr · poll** · **tmux 1.9 to 3.5** · **105** tests · **95%+** coverage
+**4** watcher backends · **fswatch · inotify · entr · poll** · **tmux 3.2+** · **95%+** coverage
 
 Watches every loaded tmux config file, and the files they source, and applies your config the moment it really changes. It uses `fswatch`, `inotifywait`, or `entr` when they are installed, and a built-in polling loop otherwise, so it works out of the box with no extra dependency. One watcher per server, tracked by pid and self-healing, so reloads never stack up. A broken edit is caught, surfaced, and rolled back to the last working config instead of half-applying.
 
@@ -75,7 +75,7 @@ Press `prefix + I`. For event-driven reloads install [fswatch](https://github.co
 
 ## Compatibility
 
-Works on every tmux version TPM supports, 1.9 and up, on Linux (x86_64 and arm64) and macOS (Intel and Apple Silicon). The mtime check reads GNU `stat -c` first and BSD `stat -f` as a fallback, so it is correct on Linux, on native macOS, and on a Mac with GNU coreutils in `PATH`. The `#{config_files}` source list needs tmux 3.2 and up; on older tmux, name your files with `@autoreload_revamped_files`. The `entr` backend is used when neither `fswatch` nor `inotifywait` is present but `entr` is.
+Needs tmux 3.2 or later, on Linux (x86_64 and arm64) and macOS (Intel and Apple Silicon). The mtime check reads GNU `stat -c` first and BSD `stat -f` as a fallback, so it is correct on Linux, on native macOS, and on a Mac with GNU coreutils in `PATH`. The default watch list and entrypoints come from `#{config_files}`, which tmux 3.2 added. The `entr` backend is used when neither `fswatch` nor `inotifywait` is present but `entr` is.
 
 ## Development
 
