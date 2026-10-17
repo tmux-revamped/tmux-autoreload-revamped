@@ -450,6 +450,23 @@ teardown() {
   [[ "$(cat "${BATS_TEST_TMPDIR}/ev")" == "E" ]]
 }
 
+@test "_watch_entr keeps watching when entr reports a new file in a directory" {
+  # Arrange
+  printf '0' > "${BATS_TEST_TMPDIR}/cnt"
+  _poll_continue() {
+    [[ "$(cat "${BATS_TEST_TMPDIR}/cnt")" == "0" ]] && { printf '1' > "${BATS_TEST_TMPDIR}/cnt"; return 0; }
+    return 1
+  }
+  _exec_entr() { return 2; }
+  ar_event() { echo "E" > "${BATS_TEST_TMPDIR}/ev"; }
+
+  # Act
+  run _watch_entr
+
+  # Assert
+  [[ "$(cat "${BATS_TEST_TMPDIR}/ev")" == "E" ]]
+}
+
 @test "_watch_entr breaks when the watcher exits" {
   _poll_continue() { return 0; }
   _exec_entr() { return 1; }

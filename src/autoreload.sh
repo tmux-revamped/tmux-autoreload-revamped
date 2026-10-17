@@ -367,12 +367,17 @@ _watch_inotify() {
   done
 }
 
+AR_ENTR_DIR_CHANGED=2
+
 _watch_entr() {
-  local targets
+  local targets rc
   while _poll_continue; do
     targets="$(ar_event_targets | tr '\n' ' ')"
     # shellcheck disable=SC2086 # word splitting the target list is intended
-    if _exec_entr ${targets}; then ar_event; else break; fi
+    _exec_entr ${targets}
+    rc=$?
+    if [[ "${rc}" -ne 0 && "${rc}" -ne "${AR_ENTR_DIR_CHANGED}" ]]; then break; fi
+    ar_event
   done
 }
 

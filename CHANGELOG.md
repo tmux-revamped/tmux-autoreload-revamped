@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `source -q` of a file that does not exist was handed to the watcher,
   which exited on the missing path and stopped autoreload. Watched paths
   that do not exist are now dropped.
+- The entr backend stopped after an editor's atomic save. `entr -d`
+  exits with status 2 when a file appears in a watched directory, which
+  the loop treated as a dead watcher. Status 2 now triggers a change
+  check and re-arms the watcher.
 
 ## [1.1.0] - 2026-06-30
 
