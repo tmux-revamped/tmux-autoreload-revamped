@@ -9,6 +9,8 @@ AR_SERVER_PID=""
 source "${PLUGIN_DIR}/src/lib/tmux/tmux-ops.sh"
 # shellcheck source=/dev/null
 source "${PLUGIN_DIR}/src/lib/autoreload/autoreload.sh"
+# shellcheck source=/dev/null
+source "${PLUGIN_DIR}/src/lib/utils/notify.sh"
 
 _tmux() { tmux "$@"; }
 _config_files() {
@@ -27,14 +29,6 @@ _client_busy() {
     *1*) return 0 ;;
     *) return 1 ;;
   esac
-}
-_notify() {
-  if has_command osascript; then
-    osascript -e "display notification \"${2}\" with title \"${1}\"" >/dev/null 2>&1
-  elif has_command notify-send; then
-    notify-send "${1}" "${2}" >/dev/null 2>&1
-  fi
-  return 0
 }
 _file_mtime() { stat -c '%Y' "${1}" 2>/dev/null || stat -f '%m' "${1}" 2>/dev/null; }
 _file_content() { cat "${1}" 2>/dev/null; }
@@ -212,7 +206,7 @@ ar_announce() {
   fi
   [[ "$(get_tmux_option "@autoreload_revamped_quiet" "0")" == "1" ]] || _message "${msg}"
   [[ "$(get_tmux_option "@autoreload_revamped_flash" "0")" == "1" ]] && _flash "${msg}"
-  [[ "$(get_tmux_option "@autoreload_revamped_notify" "0")" == "1" ]] && _notify "tmux-autoreload" "${msg}"
+  notify_if_enabled "@autoreload_revamped_notify" "tmux-autoreload" "${msg}"
   return 0
 }
 

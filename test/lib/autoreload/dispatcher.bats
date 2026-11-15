@@ -17,7 +17,6 @@ setup() {
   _source_file() { echo "SOURCE:${1}" >> "${BATS_TEST_TMPDIR}/src"; }
   _message() { echo "MSG:${1}" >> "${BATS_TEST_TMPDIR}/msg"; }
   _flash() { echo "FLASH:${1}" >> "${BATS_TEST_TMPDIR}/flash"; }
-  _notify() { echo "NOTIFY:${2}" >> "${BATS_TEST_TMPDIR}/notify"; }
   _client_busy() { return 1; }
 }
 
@@ -227,12 +226,37 @@ teardown() {
   [[ ! -f "${BATS_TEST_TMPDIR}/msg" ]]
 }
 
-@test "ar_announce flashes and notifies when enabled" {
+@test "ar_announce flashes and notifies through the shared notifier when enabled" {
+  # Arrange
   set_tmux_option "@autoreload_revamped_flash" "1"
   set_tmux_option "@autoreload_revamped_notify" "1"
+  _PLATFORM_OS_CACHE="Linux"
+  mkdir -p "${BATS_TEST_TMPDIR}/bin"
+  printf '#!/bin/sh\nprintf "%%s|" "$@" >>"%s"\n' "${BATS_TEST_TMPDIR}/notify" >"${BATS_TEST_TMPDIR}/bin/notify-send"
+  chmod +x "${BATS_TEST_TMPDIR}/bin/notify-send"
+  PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
+
+  # Act
   run ar_announce "/d/main.conf"
+
+  # Assert
   [[ "$(cat "${BATS_TEST_TMPDIR}/flash")" == *"reloaded"* ]]
-  [[ "$(cat "${BATS_TEST_TMPDIR}/notify")" == *"reloaded"* ]]
+  [ "$(cat "${BATS_TEST_TMPDIR}/notify")" = "--|tmux-autoreload|tmux config reloaded (main.conf)|" ]
+}
+
+@test "ar_announce sends no notification while the option is off" {
+  # Arrange
+  _PLATFORM_OS_CACHE="Linux"
+  mkdir -p "${BATS_TEST_TMPDIR}/bin"
+  printf '#!/bin/sh\necho called >>"%s"\n' "${BATS_TEST_TMPDIR}/notify" >"${BATS_TEST_TMPDIR}/bin/notify-send"
+  chmod +x "${BATS_TEST_TMPDIR}/bin/notify-send"
+  PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
+
+  # Act
+  run ar_announce "/d/main.conf"
+
+  # Assert
+  [ ! -e "${BATS_TEST_TMPDIR}/notify" ]
 }
 
 @test "ar_record_failure increments and resets a non-numeric counter" {
@@ -632,21 +656,6 @@ teardown() {
   _tmux() { printf '0\n0\n'; }
   run _client_busy
   [[ "${status}" -eq 1 ]]
-}
-
-@test "_notify routes to osascript, then notify-send, then nothing" {
-  source "${DISPATCHER}"
-  has_command() { [[ "${1}" == "osascript" ]]; }
-  osascript() { echo "OSA:$*" >> "${BATS_TEST_TMPDIR}/osa"; }
-  run _notify "t" "m"
-  [[ -f "${BATS_TEST_TMPDIR}/osa" ]]
-  has_command() { [[ "${1}" == "notify-send" ]]; }
-  function notify-send { echo "NS:$*" >> "${BATS_TEST_TMPDIR}/ns"; }
-  run _notify "t" "m"
-  [[ "${status}" -eq 0 ]]
-  has_command() { return 1; }
-  run _notify "t" "m"
-  [[ "${status}" -eq 0 ]]
 }
 
 @test "_flash, _config_files, _message run through the tmux seam" {
