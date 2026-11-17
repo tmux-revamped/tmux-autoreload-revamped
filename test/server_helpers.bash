@@ -107,10 +107,18 @@ message_count() {
   [[ "${count}" == "$2" ]]
 }
 
+kept() {
+  local copy
+  for copy in "${HOME}/.tmux/autoreload-revamped/backup"/*main.conf; do
+    [[ -f "${copy}" ]] && return 0
+  done
+  return 1
+}
+
 armed() {
   load_plugin "${ROOT}"
   wait_for alive
-  wait_for [ -d "${HOME}/.tmux/autoreload-revamped/backup" ]
+  wait_for kept
 }
 
 tool() {
