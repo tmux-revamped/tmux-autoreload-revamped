@@ -1,0 +1,40 @@
+#compdef autoreload-revamped
+
+_autoreload_revamped() {
+  local -a commands
+  commands=(
+    'apply:start the watcher, unless one is alive'
+    'watch:watch the config files until the server ends'
+    'reload:source the entry points now'
+    'pause:stop reacting to changes'
+    'resume:react to changes again'
+    'toggle:switch between paused and active'
+    'status:print the state, the watcher and its backend'
+    'doctor:check this machine'
+    'version:print the version'
+    'help:print the help page'
+  )
+
+  _arguments \
+    '--json[status prints one JSON object]' \
+    '--theme[colours of the terminal interface]:theme:(kodougu catppuccin-mocha catppuccin-latte dracula nord gruvbox tokyo-night mono)' \
+    '--files[files to watch, in place of the ones tmux loaded]:value:' \
+    '--entrypoints[files sourced on a reload]:value:' \
+    '--interval[seconds between checks when it polls]:value:' \
+    '--quiet[hide the reload message]:value:(0 1)' \
+    '--discover[follow the files a config sources]:value:(0 1)' \
+    '--atomic[watch each file'\''s folder too]:value:(0 1)' \
+    '--validate[source the last good copy after an error]:value:(0 1)' \
+    '--defer[wait while a pane is in a mode]:value:(0 1)' \
+    '--selective[source only the entry points that include the changed file]:value:(0 1)' \
+    '--flash[repeat the message in reverse video]:value:(0 1)' \
+    '--notify[send a desktop notification]:value:(0 1)' \
+    '--backup-dir[folder of the last good copies]:value:' \
+    '1:command:->command'
+
+  if [[ "${state}" == command ]]; then
+    _describe 'command' commands
+  fi
+}
+
+_autoreload_revamped "$@"

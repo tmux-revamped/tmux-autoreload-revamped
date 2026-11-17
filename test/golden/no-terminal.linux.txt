@@ -1,0 +1,3 @@
+$ autoreload-revamped
+autoreload-revamped: no command given. run 'autoreload-revamped help' for usage.
+exit 1

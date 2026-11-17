@@ -1,0 +1,68 @@
+$ autoreload-revamped help
+autoreload-revamped - reload the tmux config when one of its files is saved
+
+usage:
+  autoreload-revamped apply     start the watcher, unless one is alive
+  autoreload-revamped watch     watch the config files until the server ends
+  autoreload-revamped reload    source the entry points now
+  autoreload-revamped pause     stop reacting to changes
+  autoreload-revamped resume    react to changes again
+  autoreload-revamped toggle    switch between paused and active
+  autoreload-revamped status    print the state, the watcher and its backend
+  autoreload-revamped doctor    check this machine
+  autoreload-revamped version   print the version
+  autoreload-revamped help      print this page
+
+options:
+  --json           status prints one JSON object
+  --theme NAME     the look: kodougu, catppuccin-mocha, catppuccin-latte,
+                   dracula, nord, gruvbox, tokyo-night or mono
+  --SETTING VALUE  any tmux option below, named with dashes, such as
+                   --interval 5 or --quiet 1
+
+environment:
+  AUTORELOAD_REVAMPED_SETTING  any tmux option below in capitals, such as
+                               AUTORELOAD_REVAMPED_INTERVAL
+  AUTORELOAD_REVAMPED_THEME    the look, when --theme is not given
+  AUTORELOAD_REVAMPED_ACCENT   a colour such as #CBA6F7 for the accent
+  KODOUGU_THEME                the family look, when neither is given
+  KODOUGU_ACCENT               the family accent, when the tool's is unset
+  NO_COLOR                     turn colour off
+
+tmux options:
+  @autoreload_revamped_files        files to watch, in place of the ones tmux
+                                    loaded (none)
+  @autoreload_revamped_entrypoints  files sourced on a reload (the loaded
+                                    config files)
+  @autoreload_revamped_interval     seconds between checks when it polls (2)
+  @autoreload_revamped_quiet        1 hides the reload message (0)
+  @autoreload_revamped_discover     0 skips the files a config sources (1)
+  @autoreload_revamped_atomic       0 watches the files without their
+                                    folders (1)
+  @autoreload_revamped_validate     0 skips sourcing the last good copy
+                                    after an error (1)
+  @autoreload_revamped_defer        0 reloads even while a pane is in a
+                                    mode (1)
+  @autoreload_revamped_selective    1 sources only the entry points that
+                                    include the changed file (0)
+  @autoreload_revamped_flash        1 repeats the message in reverse video (0)
+  @autoreload_revamped_notify       1 sends a desktop notification (0)
+  @autoreload_revamped_backup_dir   folder of the last good copies
+                                    (~<path>
+  @revamped_theme                   the family look (kodougu)
+
+notes:
+  The entry point runs apply once when tmux loads the plugin. The watcher
+  compares a checksum of every watched file, so a save that changes no byte
+  reloads nothing. It waits on fswatch, inotifywait or entr when one is
+  installed and polls otherwise, reads the settings again on every check, and
+  ends when its tmux server does. A reload that fails shows the error once
+  and sources the last good copy of the failing file. The watcher's process
+  id is kept in @autoreload_revamped_pid and the pause in
+  @autoreload_revamped_paused.
+
+examples:
+  autoreload-revamped status
+  autoreload-revamped reload
+  autoreload-revamped doctor
+exit 0

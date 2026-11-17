@@ -4,185 +4,202 @@
 
 <strong>編輯並儲存 tmux 設定後，它會自動重新載入，毋須按鍵，也毋須指令。</strong>
 
-[English](README.md) | [日本語](README.ja.md) | [简体中文](README.zh-Hans.md) | 繁體中文（香港）
+[English](README.md) &nbsp;|&nbsp; [日本語](README.ja.md) &nbsp;|&nbsp; [简体中文](README.zh-Hans.md) &nbsp;|&nbsp; 繁體中文（香港）
 
-[![family](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/family.yml?branch=main&style=flat-square&label=family)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/family.yml)
-[![tests](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/tests.yml?branch=main&style=flat-square&label=tests)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/tests.yml)
+[![ci](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=release)](https://github.com/tmux-revamped/tmux-autoreload-revamped/releases/latest)
 [![openssf scorecard](https://img.shields.io/ossf-scorecard/github.com/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=openssf%20scorecard)](https://scorecard.dev/viewer/?uri=github.com/tmux-revamped/tmux-autoreload-revamped)
 [![license](https://img.shields.io/github/license/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=license)](LICENSE)
 
 <p align="center">
-  <a href="#what-it-does">功能</a> |
-  <a href="#requirements">系統要求</a> |
-  <a href="#installation">安裝</a> |
-  <a href="#usage">用法</a> |
-  <a href="#configuration">設定</a> |
-  <a href="#key-bindings">快捷鍵</a> |
-  <a href="#how-it-works">運作原理</a>
+  <a href="#快速開始"><strong>快速開始</strong></a> &nbsp;|&nbsp;
+  <a href="#用法">用法</a> &nbsp;|&nbsp;
+  <a href="#運作原理">運作原理</a> &nbsp;|&nbsp;
+  <a href="#畫面">畫面</a>
 </p>
 
 </div>
 
-**4** 種監察後端。**12** 個選項。**5** 個子指令。CI 在 **10** 種 Linux 及 macOS 工具鏈組合上執行測試。
+<p align="center">
+  <img src="screens/hero.gif" alt="autoreload-revamped 在儲存的一刻重新載入 tmux 設定，並在儲存出錯時報告錯誤、保留上一份正常的副本" width="800">
+</p>
+
+```console
+$ echo 'set -g status-style bg=blue' >> ~/.tmux.conf
+$ autoreload-revamped status
+autoreload-revamped: active; watcher pid 48213; backend fswatch
+```
+
+插件監視 tmux 載入的每個設定檔，以及這些檔案 `source` 的每個檔案。其中一個檔案儲存後內容有變時，它會重新載入設定，並在狀態列顯示 `tmux config reloaded (tmux.conf)`。位元組沒有變化的儲存不會重新載入；出錯的儲存只顯示一次 tmux 的錯誤，並重新載入上一份正常的副本；窗格處於複製模式時的修改會等到窗格離開該模式。
 
 ---
 
-<a id="what-it-does"></a>
+## 快速開始
 
-## 功能
-
-插件監察 tmux 載入的每個設定檔，以及這些檔案透過 `source` 引入的每個檔案。其中任何一個有變更時，它會重新載入設定，並在狀態列顯示 `tmux config reloaded (tmux.conf)`。
-
-- 插件比較內容的校驗和，因此位元組沒有改變的儲存不會觸發重新載入。
-- 含有錯誤的修改會顯示出錯的檔案及 tmux 的錯誤訊息，然後重新載入該檔案上一次成功載入的版本。
-- 窗格處於複製模式時的修改會被暫緩，所以重新載入不會打斷選取操作。所有窗格離開模式後的第一次檢查會套用它：輪詢時是下一個週期，有監察工具時是下一個檔案事件。
-- 每個 tmux 伺服器只執行一個監察進程。再次載入插件時，仍在運行的監察進程會繼續使用，已停止的會被取代。
-
-<a id="requirements"></a>
-
-## 系統要求
+### 前提條件
 
 | 工具 | 版本 | 用途 |
-|:-----|:--------|:-----------|
-| tmux | 3.2 或以上 | `#{config_files}`，列出已載入的設定檔 |
-| bash | 3.2 或以上 | 所有腳本，包括 macOS 的 `/bin/bash` |
-| `fswatch`、`inotifywait` 或 `entr` | 任何 | 可選，以事件驅動重新載入；全部沒有時插件改用輪詢 |
-| `osascript` 或 `notify-send` | 任何 | 可選，桌面通知 |
+|:-----|:--------|:---------|
+| tmux | 3.2 或以上 | 系列的最低版本；列出已載入設定檔的 `#{config_files}` 亦需要它 |
+| `fswatch`、`inotifywait` 或 `entr` | 可選 | 儲存的同時重新載入；沒有時插件每 `@autoreload_revamped_interval` 秒檢查一次 |
+| `osascript` 或 `notify-send` | 可選 | 用於 `@autoreload_revamped_notify` |
+| gum | 可選 | `autoreload-revamped` 的選單、表格和顏色；沒有它，所有命令都輸出純文字 |
 
-支援 macOS 及 Linux，x86_64 及 arm64。檔案修改時間先以 GNU 的 `stat -c` 讀取，再以 BSD 的 `stat -f` 讀取，因此在 macOS 內置工具、GNU coreutils 及 uutils coreutils 上都能運行。
-
-<a id="installation"></a>
-
-## 安裝
-
-### 使用 TPM
-
-把插件加入 `~/.tmux.conf`，然後按 `prefix + I`：
+### 安裝
 
 ```tmux
 set -g @plugin 'tmux-revamped/tmux-autoreload-revamped'
 ```
 
-### 手動安裝
+然後按 `prefix + I`。不使用 TPM 時，複製儲存庫，並在 `~/.tmux.conf` 中執行它的入口腳本：
 
 ```bash
 git clone https://github.com/tmux-revamped/tmux-autoreload-revamped ~/.tmux/plugins/tmux-autoreload-revamped
 ```
 
-然後在 `~/.tmux.conf` 加入這一行，並重新載入 tmux 一次：
-
 ```tmux
 run-shell ~/.tmux/plugins/tmux-autoreload-revamped/autoreload-revamped.tmux
 ```
 
-<a id="usage"></a>
+在複製的目錄中執行 `make install`，亦會把 `autoreload-revamped` 放入 `~/.local/bin`，並把它的 man 手冊和自動完成放在 `~/.local/share` 下。
+
+### 驗證
+
+```bash
+~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreload-revamped doctor
+```
 
 ## 用法
 
-儲存 `~/.tmux.conf` 或它引入的任何檔案。tmux 會在下一個檔案事件時套用設定；沒有安裝監察工具時，會在 `@autoreload_revamped_interval` 秒內套用。
+儲存 `~/.tmux.conf` 或它 source 的任何檔案即可。插件不綁定任何按鍵；需要按鍵時，自己綁定命令：
 
-[`src/autoreload.sh`](src/autoreload.sh) 中的腳本亦支援子指令：
-
-| 子指令 | 作用 |
-|:-----------|:-------|
-| `reload` | 立即載入入口檔案 |
-| `pause` | 停止回應修改 |
-| `resume` | 恢復回應修改 |
-| `toggle` | 在暫停及運行之間切換 |
-| `status` | 輸出狀態、監察進程的 pid 及後端 |
-
-```bash
-~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh status
+```tmux
+bind-key <key> run-shell "~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreload-revamped toggle"
 ```
 
-```text
-autoreload-revamped: active; watcher pid 48213; backend fswatch
-```
+| 命令 | 作用 |
+|:--------|:-------------|
+| `autoreload-revamped apply` | 沒有運作中的監視程序時啟動一個；插件載入時入口點會執行它 |
+| `autoreload-revamped watch` | 監視設定檔，直至 tmux 伺服器結束；這就是 `apply` 留下的程序 |
+| `autoreload-revamped reload` | 立即載入入口檔案 |
+| `autoreload-revamped pause` | 停止回應修改 |
+| `autoreload-revamped resume` | 恢復回應修改；暫停期間的儲存會在一個間隔內載入 |
+| `autoreload-revamped toggle` | 在暫停和恢復之間切換 |
+| `autoreload-revamped status` | 列出狀態、監視程序的 pid 和後端；`--json` 輸出一個物件 |
+| `autoreload-revamped doctor` | 每個依賴一行，包括監視工具 |
+| `autoreload-revamped version` | 版本，然後是 tmux 版本 |
+| `autoreload-revamped help` | 說明頁；`man autoreload-revamped` 記錄相同的命令和設定 |
+| `autoreload-revamped` | 在終端機上顯示選單 |
 
-<a id="configuration"></a>
-
-## 設定
-
-| 選項 | 預設值 | 意思 |
-|:-------|:--------|:--------|
-| `@autoreload_revamped_files` | 空 | 要監察的檔案，以逗號或空格分隔，支援 `~` 展開；設定後會取代 tmux 載入的檔案 |
-| `@autoreload_revamped_entrypoints` | 已載入的設定檔 | 每次重新載入時載入的檔案 |
-| `@autoreload_revamped_interval` | `2` | 輪詢時兩次檢查之間的秒數 |
-| `@autoreload_revamped_quiet` | `0` | `1` 隱藏重新載入的提示 |
-| `@autoreload_revamped_discover` | `1` | 跟隨 `source` 及 `source-file` 行，最多 8 層；`0` 只監察頂層檔案 |
-| `@autoreload_revamped_atomic` | `1` | 同時監察每個檔案所在的目錄，以捕捉透過重新命名來儲存的編輯器；`0` 只監察檔案 |
-| `@autoreload_revamped_validate` | `1` | 載入出錯時，載入出錯檔案上一個正常的版本；`0` 不還原 |
-| `@autoreload_revamped_defer` | `1` | 有窗格處於複製模式或其他模式時等待；`0` 立即重新載入 |
+| tmux 選項 | 預設值 | 含義 |
+|:------------|:--------|:--------|
+| `@autoreload_revamped_files` | 無 | 要監視的檔案，用逗號或空格分隔，並展開 `~`；設定後取代 tmux 載入的檔案 |
+| `@autoreload_revamped_entrypoints` | 已載入的設定檔 | 重新載入時 source 的檔案 |
+| `@autoreload_revamped_interval` | `2` | 沒有監視工具時兩次檢查之間的秒數，亦是重試被延後或暫停的重新載入的間隔 |
+| `@autoreload_revamped_quiet` | `0` | `1` 隱藏重新載入的訊息 |
+| `@autoreload_revamped_discover` | `1` | 跟隨 `source` 和 `source-file` 行，最多 8 層；`0` 只監視頂層檔案 |
+| `@autoreload_revamped_atomic` | `1` | 同時監視每個檔案所在的資料夾，這樣能捕捉到以重新命名方式儲存的編輯器；`0` 只監視檔案 |
+| `@autoreload_revamped_validate` | `1` | 載入出錯時，載入出錯檔案上一份正常的副本；`0` 略過這一步 |
+| `@autoreload_revamped_defer` | `1` | 任何窗格處於複製模式或其他模式時等待；`0` 立即重新載入 |
 | `@autoreload_revamped_selective` | `0` | `1` 只載入包含被修改檔案的入口檔案 |
-| `@autoreload_revamped_backoff_max` | `30` | 連續重新載入失敗後，輪詢間隔的最長秒數 |
-| `@autoreload_revamped_flash` | `0` | `1` 以反白再次顯示重新載入的提示 |
-| `@autoreload_revamped_notify` | `0` | `1` 每次重新載入時發出桌面通知 |
+| `@autoreload_revamped_flash` | `0` | `1` 以反白再顯示一次重新載入的訊息 |
+| `@autoreload_revamped_notify` | `0` | `1` 每次重新載入都發送桌面通知 |
+| `@autoreload_revamped_backup_dir` | `~/.tmux/autoreload-revamped/backup` | 存放每個入口檔案上一份正常副本的資料夾 |
 
-```tmux
-set -g @autoreload_revamped_files '~/.tmux.conf ~/.config/tmux/theme.conf'
-set -g @autoreload_revamped_notify '1'
-```
+每個選項亦可以用帶連字號的命令選項（例如 `--interval 5`）和環境變數（例如 `AUTORELOAD_REVAMPED_INTERVAL`）設定；命令列優先於環境變數，環境變數優先於 tmux 選項。空的 tmux 選項表示預設值。`@autoreload_revamped_pid` 和 `@autoreload_revamped_paused` 由插件自己寫入。
 
-### 內部狀態
-
-以下選項由插件自行寫入，請勿設定。
-
-| 選項 | 內容 |
-|:-------|:------|
-| `@autoreload_revamped_pid` | 正在運行的監察進程的 pid |
-| `@autoreload_revamped_paused` | 暫停時為 `1`，否則為 `0` |
-| `@autoreload_revamped_snapshot` | 每個被監察檔案一行 `path mtime` |
-| `@autoreload_revamped_hash` | 所有被監察檔案內容的校驗和 |
-| `@autoreload_revamped_fail_count` | 連續失敗的重新載入次數，會把輪詢間隔延長至 `@autoreload_revamped_backoff_max` |
-
-<a id="key-bindings"></a>
-
-## 快捷鍵
-
-插件不綁定任何按鍵。如要在 tmux 中重新載入或暫停，請自行綁定子指令：
-
-```tmux
-bind R run-shell "~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh reload"
-bind P run-shell "~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh toggle"
-```
-
-<a id="how-it-works"></a>
+<a id="運作原理"></a>
 
 ## 運作原理
 
 ```mermaid
 graph LR
-    Load[插件載入] --> Ensure[沒有運行中的監察進程時啟動一個]
-    Ensure --> Wait[等待修改]
-    Wait --> Diff[比較修改時間及校驗和]
-    Diff -->|沒有變更| Wait
-    Diff -->|有變更| Source[載入入口檔案]
-    Source -->|出錯| Rollback[顯示錯誤並載入上一個正常的版本]
-    Source -->|成功| Announce[顯示重新載入的提示]
+    Load[插件載入] --> Ensure[沒有監視程序時啟動一個]
+    Ensure --> Wait[等待儲存]
+    Wait --> Diff[比較校驗和]
+    Diff -->|沒有變化| Wait
+    Diff -->|有變化| Source[載入入口檔案]
+    Source -->|出錯| Rollback[顯示一次錯誤並載入上一份正常的副本]
+    Source -->|成功| Announce[顯示重新載入的訊息]
     Rollback --> Wait
     Announce --> Wait
 ```
 
-監察進程按 `fswatch`、`inotifywait`、`entr` 的次序使用第一個找到的工具，全部沒有時使用輪詢。每次重新載入失敗後，輪詢的等待時間加倍，最長 `@autoreload_revamped_backoff_max` 秒。
+監視程序使用它找到的第一個工具，次序是 `fswatch`、`inotifywait`、`entr`；全部沒有時每 `@autoreload_revamped_interval` 秒檢查一次。校驗和是對所有被監視檔案執行一次 `cksum` 的結果。
 
-監察進程啟動時記錄 tmux 伺服器的 pid。該伺服器結束，或通訊端上換成另一個伺服器回應時，監察進程便會結束。
+監視程序啟動時記錄 tmux 伺服器的 pid，該伺服器結束，或者另一個伺服器在通訊端上回應時，它就會結束。每個 tmux 伺服器只執行一個監視程序：再次載入插件時，運作中的監視程序繼續使用，已經停止的會重新啟動。
 
-入口檔案的備份位於 `~/.tmux/autoreload-revamped/backup`。監察進程在啟動時及每次重新載入成功後寫入備份。設定環境變數 `AR_CACHE_DIR` 可以更改位置。
+每個入口檔案上一份正常的副本存放在 `~/.tmux/autoreload-revamped/backup`，在監視程序啟動時和每次重新載入成功後寫入。用 `@autoreload_revamped_backup_dir` 可以換一個位置。
 
-<a id="development"></a>
+<a id="畫面"></a>
+
+## 畫面
+
+<details>
+<summary>所有畫面，在真實的 tmux 中用 <code>make screens</code> 錄製，每個按鍵顯示在狀態列上</summary>
+<br>
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="screens/reload.png" alt="autoreload-revamped：儲存後重新載入設定，並在狀態列提示"><br><sub>儲存後重新載入設定，並在狀態列提示，來自 <code>hero.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/broken.png" alt="autoreload-revamped：出錯的儲存顯示 tmux 的錯誤，並保留上一份正常的副本"><br><sub>出錯的儲存顯示 tmux 的錯誤，並保留上一份正常的副本，來自 <code>hero.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/menu.png" alt="autoreload-revamped：選單"><br><sub>選單，來自 <code>hero.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/doctor.png" alt="autoreload-revamped：doctor"><br><sub><code>doctor</code>，來自 <code>hero.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/status.png" alt="autoreload-revamped：status"><br><sub><code>status</code>，來自 <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/paused.png" alt="autoreload-revamped：pause 停止回應修改"><br><sub><code>pause</code> 停止回應修改，來自 <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/plain-menu.png" alt="autoreload-revamped：沒有 gum 的選單"><br><sub>沒有 gum 的選單，來自 <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/plain-status.png" alt="autoreload-revamped：從選單執行 status"><br><sub>從選單執行 <code>status</code>，來自 <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/version.png" alt="autoreload-revamped：版本"><br><sub>版本，來自 <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/error.png" alt="autoreload-revamped：不明命令"><br><sub>不明命令，來自 <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/themes.png" alt="autoreload-revamped：六種主題下的標題"><br><sub>六種主題下的標題，來自 <code>themes.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/help.png" alt="autoreload-revamped：說明頁"><br><sub>說明頁，來自 <code>help.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/accent.png" alt="autoreload-revamped：來自 AUTORELOAD_REVAMPED_ACCENT 的強調色"><br><sub>來自 <code>AUTORELOAD_REVAMPED_ACCENT</code> 的強調色，來自 <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"></td>
+</tr>
+</table>
+
+</details>
+
+## 可攜性
+
+插件是 POSIX `sh`。CI 在下列每一行上執行全部測試。
+
+| Shell | 狀態 |
+|:------|:-------|
+| `dash`、macOS 上的 `/bin/sh` | 支援 |
+| `bash` 3.2 和 5.x、系統內建的 `zsh` 和 Homebrew 的 `zsh` | 支援 |
+
+| 系統 | 狀態 |
+|:-------|:-------|
+| macOS | Apple Silicon 和 Intel 上的 Tahoe，使用內建的工具、Homebrew 的 GNU 工具和 Homebrew 的 uutils |
+| Linux | x86_64 和 arm64 上的 Ubuntu 26.04，使用 GNU coreutils、uutils 和 BusyBox |
 
 ## 開發
 
 | 指令 | 執行內容 |
 |:--------|:-------------|
-| `make test` | [`test/`](test) 下的 bats 測試 |
-| `make lint` | 對所有 shell 檔案執行 shellcheck |
-| `make coverage` | 在 Linux 上以 kcov 計算行覆蓋率，低於 95% 時失敗 |
+| `make fmt` | 對每個腳本執行 shfmt `-i 2` |
+| `make lint` | shfmt、ShellCheck、mandoc、yamllint 和 actionlint，零警告 |
+| `make test` | 在系統 `sh` 下執行 bats 測試 |
+| `make test-all` | 在每個已安裝的 shell 下執行測試，macOS 上包括 bash 和 zsh 的兩種版本 |
+| `make test-linux` | 在 Ubuntu 容器中執行測試 |
+| `make coverage` | 在這部 Mac 和 Ubuntu 容器中執行 bashcov，合併後以 100% 為門檻 |
+| `make screens` | 以 VHS 在 tmux 中從真實插件錄製上述畫面，在 macOS 上執行 |
+| `make install` | 把指令、man 手冊和自動完成安裝到 `PREFIX` 下 |
 
-選擇監察工具、偵測修改及處理路徑的純函數位於 [`src/lib/autoreload/autoreload.sh`](src/lib/autoreload/autoreload.sh)。
-
-<a id="license"></a>
+提交遵循 Conventional Commits 格式，直接進入 `main`。`main` 上的 `ci` 通過後，`release.yml` 會執行 semantic-release：自上一個標籤以來的每個 `feat` 或 `fix` 都會發佈新版本，更新版本常數，並把說明寫入 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ## 授權
 

@@ -1,8 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
-CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-AR_CMD="${CURRENT_DIR}/src/autoreload.sh"
-
-chmod +x "${AR_CMD}" 2>/dev/null || true
-
-"${AR_CMD}" ensure >/dev/null 2>&1
+autoreload_revamped_dir=$(cd "$(dirname "$0")" && pwd)
+"${autoreload_revamped_dir}/bin/autoreload-revamped" apply

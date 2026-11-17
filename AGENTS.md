@@ -8,55 +8,51 @@ Guidance for anyone, human or agent, changing tmux-autoreload-revamped. What it 
 
 | Path | Holds |
 |:-----|:------|
-| [`autoreload-revamped.tmux`](autoreload-revamped.tmux) | The entry point TPM runs |
-| [`src/autoreload.sh`](src/autoreload.sh) | The script the placeholders, keys and popups call |
-| [`src/lib/autoreload/`](src/lib/autoreload) | This member's modules |
-| [`src/lib/utils/constants.sh`](src/lib/utils/constants.sh) | This member's constants, including its version |
-| [`src/lib/utils/`](src/lib/utils), [`src/lib/tmux/`](src/lib/tmux) | The shared library. Every file there except `constants.sh` is identical in every member |
-| [`test/`](test) | The bats suite. `helpers.bash` and `tmux_helpers.bash` are identical in every member; this member's own mocks go in the `_local` files |
+| [`autoreload-revamped.tmux`](autoreload-revamped.tmux) | The entry point TPM runs: it runs `bin/autoreload-revamped apply` |
+| [`bin/autoreload-revamped`](bin/autoreload-revamped) | The command: `apply`, `watch`, `reload`, `pause`, `resume`, `toggle`, `status`, `doctor`, `version`, `help` and the menu. `apply` and `watch` run without loading the interface modules |
+| [`lib/autoreload.sh`](lib/autoreload.sh) | Reading the settings, the list of watched files, the snapshot, the reload and the watcher |
+| [`lib/state.sh`](lib/state.sh) | Every global, including `AUTORELOAD_REVAMPED_SETTINGS`, the table of setting names and defaults the rest reads |
+| [`lib/core.sh`](lib/core.sh) | The version |
+| [`lib/`](lib) | Every other file is the shared library, identical in every member |
+| [`test/autoreload.bats`](test/autoreload.bats), [`test/watch.bats`](test/watch.bats), [`test/commands.bats`](test/commands.bats), [`test/entrypoint.bats`](test/entrypoint.bats), [`test/backends.bats`](test/backends.bats) | This member's suites: the library and the watcher through stand-in tools, the commands, the plugin on a private tmux server started with a real config, and each watcher tool for real where it is installed. The first three share [`test/autoreload_helpers.bash`](test/autoreload_helpers.bash) and the last two [`test/server_helpers.bash`](test/server_helpers.bash) |
+| [`screens/`](screens) | The tapes and the recording's tmux config, which points the plugin at a config file in the demo folder |
 
 ## Names
 
-- Settings are tmux options named `@autoreload_revamped_<setting>`.
-- Placeholders include `#{config_files}`.
-- Public functions carry `ar_`; private ones start with `_`.
+- Settings are the tmux options `@autoreload_revamped_<setting>` listed in `AUTORELOAD_REVAMPED_SETTINGS`, the long options with dashes, such as `--backup-dir`, and the environment variables `AUTORELOAD_REVAMPED_<SETTING>`.
+- `@autoreload_revamped_pid` holds the watcher's pid and `@autoreload_revamped_paused` the pause; they are state, never settings.
+- It has no status placeholders and binds no key.
 - The version constant is `AUTORELOAD_REVAMPED_VERSION`.
-- `AR_CACHE_DIR` is read from the environment.
-- Its command-line tool, once it exists, is `autoreload-revamped`.
+- The command's own functions and the library's never share a name, because the command is sourced after the library and would replace it.
 
 ## Behaviour
 
-- Watches every tmux config file and sources it again when it is saved, with no key and no command.
-- Loading the plugin starts one watcher per server, unless one is already alive.
-- A change is detected by comparing modification times and a checksum, so saving an unchanged file reloads nothing.
-- A reload that fails shows the error and sources the last good copy again.
+- Every command reads the settings, the server's pid, the pause, the watcher's pid and `#{config_files}` with one `tmux display-message` call and one `env` read. An empty tmux option means its default.
+- `apply` starts `watch` in the background with its input, output and errors on `/dev/null`, records its pid and returns. A watcher that inherits the entry point's input keeps `run-shell` from returning.
+- `apply` keeps a living watcher and replaces a dead one, so one watcher runs per tmux server.
+- A reload sources every entry point, shows `tmux config reloaded` with the first changed file, and saves a copy of each entry point. With `@autoreload_revamped_selective` on it sources only the entry points whose tree holds the changed file.
+- A reload that fails shows `tmux config error in` with the file and tmux's message once, sources the last good copy when `@autoreload_revamped_validate` is on, and records the snapshot, so the same broken content is never retried.
 - A desktop notification for each reload goes through the shared notifier behind `@autoreload_revamped_notify`, off by default.
+- The entry point clears every inherited `REVAMPED_` variable except the test switches, and every `AUTORELOAD_REVAMPED_*_LOADED` guard; every other global is assigned outright in the state file.
 
 ## Domain rules
 
-- The watcher uses the first tool it finds: `fswatch`, `inotifywait`, `entr`, then a polling loop. The polling loop doubles its wait after each failed reload, up to `@autoreload_revamped_backoff_max` seconds.
-- The watcher records the tmux server's pid when it starts and exits when that server is gone or a different server answers on the socket.
-- Backups of the entry points live under `~/.tmux/autoreload-revamped/backup`, written when the watcher starts and after each reload that succeeds. `AR_CACHE_DIR` moves them.
+- The watched files are `@autoreload_revamped_files` when set, else the files tmux loaded, plus every file they `source` or `source-file`, followed up to 8 levels, each once, missing ones skipped.
+- A snapshot is one `cksum` run over every watched file. A change is a row that differs, so a save that changes no byte reloads nothing, and no modification time is read.
+- After a reload the watcher keeps the snapshot it loaded, never a fresh one, and takes a fresh row only for a file that just joined the list. A fresh snapshot would record a save made while the reload ran as already loaded.
+- The watcher uses the first tool it finds: `fswatch`, `inotifywait`, `entr`, then a check every `@autoreload_revamped_interval` seconds. With `@autoreload_revamped_atomic` on, the tool is also given each file's folder.
+- An event backend starts its tool, compares the snapshot once more, and only then waits, because a save made before the tool was watching raises no event. A guard beside the tool checks every 5 seconds that the tmux server is alive and the snapshot unchanged, and ends the tool otherwise, so a watcher never outlives its server and a save the tool missed is loaded within that time.
+- `entr` exits with 2 when a folder it watches changes; that is a reason to check, never a failure. Any other failure of a tool waits one interval before the next round.
+- A reload held back by a pane in a mode, or by a pause, is checked again every interval on every backend, since no file event announces a pane leaving copy-mode.
+- The watcher records the tmux server's pid when it starts and ends when a different server answers on the socket.
+- Stopping a tool or the guard is a `kill` followed by a `wait`, so the shell reports no ended job.
 
 ## Release
 
-- `AUTORELOAD_REVAMPED_VERSION` in [`src/lib/utils/constants.sh`](src/lib/utils/constants.sh) holds the version. It must equal the newest versioned heading in [`CHANGELOG.md`](CHANGELOG.md) and the README's version badge, which the `version` job in `tests.yml` checks.
-- A push to `main` whose version has no tag yet makes the `release` job in `tests.yml` tag `vX.Y.Z` and publish a GitHub release with that changelog section.
-- Unreleased changes sit under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md) until a release is cut.
+- `AUTORELOAD_REVAMPED_VERSION` in [`lib/core.sh`](lib/core.sh) holds the version. Nobody edits it by hand.
+- After a green `ci` run on `main`, [`release.yml`](.github/workflows/release.yml) runs semantic-release: a `feat` or `fix` since the last tag publishes a release, [`set-version.sh`](.github/scripts/set-version.sh) stamps the constant, and the notes go into [`CHANGELOG.md`](CHANGELOG.md).
+- [`ci.yml`](.github/workflows/ci.yml) and [`test/linux-container.sh`](test/linux-container.sh) install `fswatch`, `inotify-tools` and `entr` on Linux and `fswatch` and `entr` on macOS, so [`test/backends.bats`](test/backends.bats) runs each tool for real there; on a machine without a tool its tests are skipped.
 
 ## Gaps against FAMILY.md
 
-As of 2026-11-15:
-
-- Every script is bash, under `#!/usr/bin/env bash`, not POSIX `sh`, so it is untested under `dash`, `zsh` and BusyBox `sh`.
-- The code lives in [`src/`](src) and [`src/lib/`](src/lib); there is no `bin/autoreload-revamped`, `lib/state.sh` or `lib/core.sh`.
-- No `autoreload-revamped` command with `help`, `version` and `doctor` in the family's form, no man page, no completions and no `manifest.json`.
-- No gum interface: no `lib/ui.sh`, `lib/table.awk`, themes or `test/bin/gum`.
-- No `screens/`: no VHS recording of each feature, no on-screen caption of the keys each recording presses, and no recordings in the README.
-- The README sections are not the family's order of Quick start, Usage, topic sections, Portability, Development and License.
-- Coverage is kcov with a 95 percent floor on Linux, not bashcov at 100 percent merged from macOS and Linux.
-- CI tests GNU, BSD and uutils tools in `tests.yml`, but not the six toolsets through `.github/scripts/toolset.sh`, and no shell matrix under `sh`, `dash`, `bash` and `zsh`.
-- No golden transcripts, `call.sh`, `run-matrix.sh` or `linux-container.sh`.
-- The version is written by hand and released by `tests.yml`; there is no semantic-release, `package.json`, `release.yml` with `recover`, `bot-merge.yml` or Renovate.
-- CI is `tests.yml` and `security.yml`, not `ci.yml`, and no job starts with `step-security/harden-runner`.
-- No `.editorconfig`, `.yamllint.yml` or shfmt; the Makefile has `help`, `test`, `test-unit`, `coverage`, `lint` and `clean`, not the family's targets.
+As of 2026-11-17, none.

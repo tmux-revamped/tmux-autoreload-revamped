@@ -4,185 +4,202 @@
 
 <strong>编辑并保存 tmux 配置后，它会自动重新加载，无需按键，也无需命令。</strong>
 
-[English](README.md) | [日本語](README.ja.md) | 简体中文 | [繁體中文（香港）](README.zh-HK.md)
+[English](README.md) &nbsp;|&nbsp; [日本語](README.ja.md) &nbsp;|&nbsp; 简体中文 &nbsp;|&nbsp; [繁體中文（香港）](README.zh-HK.md)
 
-[![family](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/family.yml?branch=main&style=flat-square&label=family)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/family.yml)
-[![tests](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/tests.yml?branch=main&style=flat-square&label=tests)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/tests.yml)
+[![ci](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=release)](https://github.com/tmux-revamped/tmux-autoreload-revamped/releases/latest)
 [![openssf scorecard](https://img.shields.io/ossf-scorecard/github.com/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=openssf%20scorecard)](https://scorecard.dev/viewer/?uri=github.com/tmux-revamped/tmux-autoreload-revamped)
 [![license](https://img.shields.io/github/license/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=license)](LICENSE)
 
 <p align="center">
-  <a href="#what-it-does">功能</a> |
-  <a href="#requirements">环境要求</a> |
-  <a href="#installation">安装</a> |
-  <a href="#usage">用法</a> |
-  <a href="#configuration">配置</a> |
-  <a href="#key-bindings">快捷键</a> |
-  <a href="#how-it-works">工作原理</a>
+  <a href="#快速开始"><strong>快速开始</strong></a> &nbsp;|&nbsp;
+  <a href="#用法">用法</a> &nbsp;|&nbsp;
+  <a href="#工作原理">工作原理</a> &nbsp;|&nbsp;
+  <a href="#界面">界面</a>
 </p>
 
 </div>
 
-**4** 种监听后端。**12** 个选项。**5** 个子命令。CI 在 **10** 种 Linux 和 macOS 工具链组合上运行测试。
+<p align="center">
+  <img src="screens/hero.gif" alt="autoreload-revamped 在保存的一刻重新加载 tmux 配置，并在保存出错时报告错误、保留上一份正常的副本" width="800">
+</p>
+
+```console
+$ echo 'set -g status-style bg=blue' >> ~/.tmux.conf
+$ autoreload-revamped status
+autoreload-revamped: active; watcher pid 48213; backend fswatch
+```
+
+插件监视 tmux 加载的每个配置文件，以及这些文件 `source` 的每个文件。其中一个文件保存后内容有变化时，它会重新加载配置，并在状态栏显示 `tmux config reloaded (tmux.conf)`。字节没有变化的保存不会重新加载；出错的保存只显示一次 tmux 的错误，并重新加载上一份正常的副本；窗格处于复制模式时的修改会等到窗格离开该模式。
 
 ---
 
-<a id="what-it-does"></a>
+## 快速开始
 
-## 功能
-
-插件监听 tmux 加载的每个配置文件，以及这些文件通过 `source` 引入的每个文件。其中任何一个发生变化时，它会重新加载配置，并在状态栏显示 `tmux config reloaded (tmux.conf)`。
-
-- 插件比较内容的校验和，因此字节没有变化的保存不会触发重新加载。
-- 含有错误的修改会显示出错的文件和 tmux 的错误信息，然后重新加载该文件上一次成功加载的版本。
-- 窗格处于复制模式时发生的修改会被暂缓，所以重新加载不会打断选择操作。所有窗格退出模式后的第一次检查会应用它：轮询时是下一个周期，有监听工具时是下一个文件事件。
-- 每个 tmux 服务器只运行一个监听进程。再次加载插件时，存活的监听进程会被沿用，已停止的会被替换。
-
-<a id="requirements"></a>
-
-## 环境要求
+### 前提条件
 
 | 工具 | 版本 | 用途 |
-|:-----|:--------|:-----------|
-| tmux | 3.2 或更高 | `#{config_files}`，列出已加载的配置文件 |
-| bash | 3.2 或更高 | 所有脚本，包括 macOS 的 `/bin/bash` |
-| `fswatch`、`inotifywait` 或 `entr` | 任意 | 可选，事件驱动的重新加载；都没有时插件改用轮询 |
-| `osascript` 或 `notify-send` | 任意 | 可选，桌面通知 |
+|:-----|:--------|:---------|
+| tmux | 3.2 或更高 | 家族的最低版本；列出已加载配置文件的 `#{config_files}` 也需要它 |
+| `fswatch`、`inotifywait` 或 `entr` | 可选 | 保存的同时重新加载；没有时插件每 `@autoreload_revamped_interval` 秒检查一次 |
+| `osascript` 或 `notify-send` | 可选 | 用于 `@autoreload_revamped_notify` |
+| gum | 可选 | `autoreload-revamped` 的菜单、表格和颜色；没有它，所有命令都输出纯文本 |
 
-支持 macOS 和 Linux，x86_64 和 arm64。文件修改时间先用 GNU 的 `stat -c` 读取，再用 BSD 的 `stat -f`，因此在 macOS 自带工具、GNU coreutils 和 uutils coreutils 上都能运行。
-
-<a id="installation"></a>
-
-## 安装
-
-### 使用 TPM
-
-把插件加入 `~/.tmux.conf`，然后按 `prefix + I`：
+### 安装
 
 ```tmux
 set -g @plugin 'tmux-revamped/tmux-autoreload-revamped'
 ```
 
-### 手动安装
+然后按 `prefix + I`。不用 TPM 时，克隆仓库，并在 `~/.tmux.conf` 中运行它的入口文件：
 
 ```bash
 git clone https://github.com/tmux-revamped/tmux-autoreload-revamped ~/.tmux/plugins/tmux-autoreload-revamped
 ```
 
-然后在 `~/.tmux.conf` 中加入这一行，并重新加载一次 tmux：
-
 ```tmux
 run-shell ~/.tmux/plugins/tmux-autoreload-revamped/autoreload-revamped.tmux
 ```
 
-<a id="usage"></a>
+在克隆的目录中运行 `make install`，还会把 `autoreload-revamped` 放进 `~/.local/bin`，把它的 man 手册和补全放在 `~/.local/share` 下。
+
+### 验证
+
+```bash
+~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreload-revamped doctor
+```
 
 ## 用法
 
-保存 `~/.tmux.conf` 或它引入的任何文件。tmux 会在下一个文件事件时应用配置；没有安装监听工具时，在 `@autoreload_revamped_interval` 秒内应用。
-
-[`src/autoreload.sh`](src/autoreload.sh) 中的脚本还支持子命令：
-
-| 子命令 | 作用 |
-|:-----------|:-------|
-| `reload` | 立即加载入口文件 |
-| `pause` | 停止响应修改 |
-| `resume` | 恢复响应修改 |
-| `toggle` | 在暂停和运行之间切换 |
-| `status` | 输出状态、监听进程的 pid 和后端 |
-
-```bash
-~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh status
-```
-
-```text
-autoreload-revamped: active; watcher pid 48213; backend fswatch
-```
-
-<a id="configuration"></a>
-
-## 配置
-
-| 选项 | 默认值 | 含义 |
-|:-------|:--------|:--------|
-| `@autoreload_revamped_files` | 空 | 要监听的文件，用逗号或空格分隔，支持 `~` 展开；设置后会取代 tmux 加载的文件 |
-| `@autoreload_revamped_entrypoints` | 已加载的配置文件 | 每次重新加载时加载的文件 |
-| `@autoreload_revamped_interval` | `2` | 轮询时两次检查之间的秒数 |
-| `@autoreload_revamped_quiet` | `0` | `1` 隐藏重新加载的提示 |
-| `@autoreload_revamped_discover` | `1` | 跟随 `source` 和 `source-file` 行，最多 8 层；`0` 只监听顶层文件 |
-| `@autoreload_revamped_atomic` | `1` | 同时监听每个文件所在的目录，以捕获通过重命名保存的编辑器；`0` 只监听文件 |
-| `@autoreload_revamped_validate` | `1` | 加载出错时，加载出错文件上一个正常的版本；`0` 不回滚 |
-| `@autoreload_revamped_defer` | `1` | 有窗格处于复制模式或其他模式时等待；`0` 立即重新加载 |
-| `@autoreload_revamped_selective` | `0` | `1` 只加载包含被修改文件的那些入口文件 |
-| `@autoreload_revamped_backoff_max` | `30` | 连续重新加载失败后，轮询间隔的最大秒数 |
-| `@autoreload_revamped_flash` | `0` | `1` 以反色再次显示重新加载的提示 |
-| `@autoreload_revamped_notify` | `0` | `1` 每次重新加载时发送桌面通知 |
+保存 `~/.tmux.conf` 或它 source 的任何文件即可。插件不绑定任何按键；需要按键时，自己绑定命令：
 
 ```tmux
-set -g @autoreload_revamped_files '~/.tmux.conf ~/.config/tmux/theme.conf'
-set -g @autoreload_revamped_notify '1'
+bind-key <key> run-shell "~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreload-revamped toggle"
 ```
 
-### 内部状态
+| 命令 | 作用 |
+|:--------|:-------------|
+| `autoreload-revamped apply` | 没有存活的监视进程时启动一个；插件加载时入口点会运行它 |
+| `autoreload-revamped watch` | 监视配置文件，直到 tmux 服务器结束；这就是 `apply` 留下的进程 |
+| `autoreload-revamped reload` | 立即加载入口文件 |
+| `autoreload-revamped pause` | 停止响应修改 |
+| `autoreload-revamped resume` | 恢复响应修改；暂停期间的保存会在一个间隔内加载 |
+| `autoreload-revamped toggle` | 在暂停和恢复之间切换 |
+| `autoreload-revamped status` | 打印状态、监视进程的 pid 和后端；`--json` 输出一个对象 |
+| `autoreload-revamped doctor` | 每个依赖一行，包括监视工具 |
+| `autoreload-revamped version` | 版本，然后是 tmux 版本 |
+| `autoreload-revamped help` | 帮助页；`man autoreload-revamped` 记录相同的命令和设置 |
+| `autoreload-revamped` | 在终端上显示菜单 |
 
-以下选项由插件自己写入，请不要设置。
+| tmux 选项 | 默认值 | 含义 |
+|:------------|:--------|:--------|
+| `@autoreload_revamped_files` | 无 | 要监视的文件，用逗号或空格分隔，并展开 `~`；设置后取代 tmux 加载的文件 |
+| `@autoreload_revamped_entrypoints` | 已加载的配置文件 | 重新加载时 source 的文件 |
+| `@autoreload_revamped_interval` | `2` | 没有监视工具时两次检查之间的秒数，也是重试被推迟或暂停的重新加载的间隔 |
+| `@autoreload_revamped_quiet` | `0` | `1` 隐藏重新加载的消息 |
+| `@autoreload_revamped_discover` | `1` | 跟随 `source` 和 `source-file` 行，最多 8 层；`0` 只监视顶层文件 |
+| `@autoreload_revamped_atomic` | `1` | 同时监视每个文件所在的文件夹，这样能捕捉到用重命名方式保存的编辑器；`0` 只监视文件 |
+| `@autoreload_revamped_validate` | `1` | 加载出错时，加载出错文件上一份正常的副本；`0` 跳过这一步 |
+| `@autoreload_revamped_defer` | `1` | 任何窗格处于复制模式或其他模式时等待；`0` 立即重新加载 |
+| `@autoreload_revamped_selective` | `0` | `1` 只加载包含被修改文件的入口文件 |
+| `@autoreload_revamped_flash` | `0` | `1` 用反色再显示一次重新加载的消息 |
+| `@autoreload_revamped_notify` | `0` | `1` 每次重新加载都发送桌面通知 |
+| `@autoreload_revamped_backup_dir` | `~/.tmux/autoreload-revamped/backup` | 存放每个入口文件上一份正常副本的文件夹 |
 
-| 选项 | 内容 |
-|:-------|:------|
-| `@autoreload_revamped_pid` | 正在运行的监听进程的 pid |
-| `@autoreload_revamped_paused` | 暂停时为 `1`，否则为 `0` |
-| `@autoreload_revamped_snapshot` | 每个被监听文件一行 `path mtime` |
-| `@autoreload_revamped_hash` | 所有被监听文件内容的校验和 |
-| `@autoreload_revamped_fail_count` | 连续失败的重新加载次数，会把轮询间隔延长到 `@autoreload_revamped_backoff_max` |
+每个选项也可以用带连字符的命令选项（例如 `--interval 5`）和环境变量（例如 `AUTORELOAD_REVAMPED_INTERVAL`）设置；命令行优先于环境变量，环境变量优先于 tmux 选项。空的 tmux 选项表示默认值。`@autoreload_revamped_pid` 和 `@autoreload_revamped_paused` 由插件自己写入。
 
-<a id="key-bindings"></a>
-
-## 快捷键
-
-插件不绑定任何按键。要在 tmux 中重新加载或暂停，请自行绑定子命令：
-
-```tmux
-bind R run-shell "~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh reload"
-bind P run-shell "~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh toggle"
-```
-
-<a id="how-it-works"></a>
+<a id="工作原理"></a>
 
 ## 工作原理
 
 ```mermaid
 graph LR
-    Load[插件加载] --> Ensure[没有存活的监听进程时启动一个]
-    Ensure --> Wait[等待修改]
-    Wait --> Diff[比较修改时间和校验和]
+    Load[插件加载] --> Ensure[没有监视进程时启动一个]
+    Ensure --> Wait[等待保存]
+    Wait --> Diff[比较校验和]
     Diff -->|未变化| Wait
-    Diff -->|已变化| Source[加载入口文件]
-    Source -->|出错| Rollback[显示错误并加载上一个正常的版本]
-    Source -->|成功| Announce[显示重新加载的提示]
+    Diff -->|有变化| Source[加载入口文件]
+    Source -->|出错| Rollback[显示一次错误并加载上一份正常的副本]
+    Source -->|成功| Announce[显示重新加载的消息]
     Rollback --> Wait
     Announce --> Wait
 ```
 
-监听进程按 `fswatch`、`inotifywait`、`entr` 的顺序使用第一个找到的工具，都没有时使用轮询。每次重新加载失败后，轮询的等待时间加倍，最长 `@autoreload_revamped_backoff_max` 秒。
+监视进程使用它找到的第一个工具，顺序是 `fswatch`、`inotifywait`、`entr`；都没有时每 `@autoreload_revamped_interval` 秒检查一次。校验和是对所有被监视文件运行一次 `cksum` 的结果。
 
-监听进程启动时记录 tmux 服务器的 pid。该服务器退出，或套接字上换成另一个服务器响应时，监听进程就会退出。
+监视进程启动时记录 tmux 服务器的 pid，该服务器结束，或者另一个服务器在套接字上应答时，它就退出。每个 tmux 服务器只运行一个监视进程：再次加载插件时，存活的监视进程继续使用，已经停止的会被重新启动。
 
-入口文件的备份位于 `~/.tmux/autoreload-revamped/backup`。监听进程在启动时以及每次重新加载成功后写入备份。设置环境变量 `AR_CACHE_DIR` 可以更改位置。
+每个入口文件上一份正常的副本存放在 `~/.tmux/autoreload-revamped/backup`，在监视进程启动时和每次重新加载成功后写入。用 `@autoreload_revamped_backup_dir` 可以换一个位置。
 
-<a id="development"></a>
+<a id="界面"></a>
+
+## 界面
+
+<details>
+<summary>所有界面，在真实的 tmux 中用 <code>make screens</code> 录制，每个按键显示在状态栏上</summary>
+<br>
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="screens/reload.png" alt="autoreload-revamped：保存后重新加载配置，并在状态栏提示"><br><sub>保存后重新加载配置，并在状态栏提示，来自 <code>hero.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/broken.png" alt="autoreload-revamped：出错的保存显示 tmux 的错误，并保留上一份正常的副本"><br><sub>出错的保存显示 tmux 的错误，并保留上一份正常的副本，来自 <code>hero.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/menu.png" alt="autoreload-revamped：菜单"><br><sub>菜单，来自 <code>hero.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/doctor.png" alt="autoreload-revamped：doctor"><br><sub><code>doctor</code>，来自 <code>hero.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/status.png" alt="autoreload-revamped：status"><br><sub><code>status</code>，来自 <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/paused.png" alt="autoreload-revamped：pause 停止响应修改"><br><sub><code>pause</code> 停止响应修改，来自 <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/plain-menu.png" alt="autoreload-revamped：没有 gum 的菜单"><br><sub>没有 gum 的菜单，来自 <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/plain-status.png" alt="autoreload-revamped：从菜单运行 status"><br><sub>从菜单运行 <code>status</code>，来自 <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/version.png" alt="autoreload-revamped：版本"><br><sub>版本，来自 <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/error.png" alt="autoreload-revamped：未知命令"><br><sub>未知命令，来自 <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/themes.png" alt="autoreload-revamped：六种主题下的标题"><br><sub>六种主题下的标题，来自 <code>themes.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/help.png" alt="autoreload-revamped：帮助页"><br><sub>帮助页，来自 <code>help.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/accent.png" alt="autoreload-revamped：来自 AUTORELOAD_REVAMPED_ACCENT 的强调色"><br><sub>来自 <code>AUTORELOAD_REVAMPED_ACCENT</code> 的强调色，来自 <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"></td>
+</tr>
+</table>
+
+</details>
+
+## 可移植性
+
+插件是 POSIX `sh`。CI 在下面每一行上运行全部测试。
+
+| Shell | 状态 |
+|:------|:-------|
+| `dash`、macOS 上的 `/bin/sh` | 支持 |
+| `bash` 3.2 和 5.x、系统自带的 `zsh` 和 Homebrew 的 `zsh` | 支持 |
+
+| 系统 | 状态 |
+|:-------|:-------|
+| macOS | Apple Silicon 和 Intel 上的 Tahoe，使用系统自带的工具、Homebrew 的 GNU 工具和 Homebrew 的 uutils |
+| Linux | x86_64 和 arm64 上的 Ubuntu 26.04，使用 GNU coreutils、uutils 和 BusyBox |
 
 ## 开发
 
 | 命令 | 运行内容 |
 |:--------|:-------------|
-| `make test` | [`test/`](test) 下的 bats 测试 |
-| `make lint` | 对所有 shell 文件运行 shellcheck |
-| `make coverage` | 在 Linux 上用 kcov 统计行覆盖率，低于 95% 时失败 |
+| `make fmt` | 对每个脚本运行 shfmt `-i 2` |
+| `make lint` | shfmt、ShellCheck、mandoc、yamllint 和 actionlint，零告警 |
+| `make test` | 在系统 `sh` 下运行 bats 测试 |
+| `make test-all` | 在每个已安装的 shell 下运行测试，macOS 上包括 bash 和 zsh 的两种构建 |
+| `make test-linux` | 在 Ubuntu 容器中运行测试 |
+| `make coverage` | 在这台 Mac 和 Ubuntu 容器中运行 bashcov，合并后以 100% 为门槛 |
+| `make screens` | 用 VHS 在 tmux 中从真实插件录制上面的界面，在 macOS 上运行 |
+| `make install` | 把命令、man 手册和补全安装到 `PREFIX` 下 |
 
-选择监听工具、检测修改和处理路径的纯函数位于 [`src/lib/autoreload/autoreload.sh`](src/lib/autoreload/autoreload.sh)。
-
-<a id="license"></a>
+提交遵循 Conventional Commits 格式，直接进入 `main`。`main` 上的 `ci` 通过后，`release.yml` 运行 semantic-release：自上一个标签以来的每个 `feat` 或 `fix` 都会发布新版本，更新版本常量，并把说明写进 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ## 许可证
 

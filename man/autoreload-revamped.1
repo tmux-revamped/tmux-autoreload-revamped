@@ -1,0 +1,222 @@
+.TH AUTORELOAD-REVAMPED 1 "2026-11-17" "autoreload-revamped" "User Commands"
+.SH NAME
+autoreload-revamped \- reload the tmux config when one of its files is saved
+.SH SYNOPSIS
+.B autoreload-revamped
+.RI [ options ]
+.B apply
+.br
+.B autoreload-revamped
+.RI [ options ]
+.B watch
+.br
+.B autoreload-revamped
+.RI [ options ]
+.B reload
+.br
+.B autoreload-revamped pause
+.br
+.B autoreload-revamped resume
+.br
+.B autoreload-revamped toggle
+.br
+.B autoreload-revamped
+.RB [ \-\-json ]
+.B status
+.br
+.B autoreload-revamped doctor
+.br
+.B autoreload-revamped version
+.br
+.B autoreload-revamped help
+.SH DESCRIPTION
+.B autoreload-revamped
+watches every config file tmux loaded, and every file those files source. When
+one is saved with different content, it sources the config again and shows a
+message in the status line. A save that changes no byte reloads nothing, a
+reload that fails shows tmux's error once and puts the last good copy back,
+and
+a change made while a pane is in copy-mode waits until the pane leaves it. The
+entry point
+.B autoreload-revamped.tmux
+runs
+.B apply
+once when tmux loads the plugin, which leaves one watcher running per tmux
+server. It binds no key.
+.PP
+The watcher uses the first tool it finds:
+.BR fswatch ,
+.BR inotifywait ,
+.BR entr ,
+then a check every
+.B @autoreload_revamped_interval
+seconds. It ends when its tmux server does.
+.PP
+Run with no command on a terminal, it offers a menu.
+.SH COMMANDS
+.TP
+.B apply
+Start the watcher for this tmux server, unless one is alive. It returns at
+once.
+.TP
+.B watch
+Watch the config files in the foreground until the tmux server ends. This is
+what
+.B apply
+leaves running.
+.TP
+.B reload
+Source the entry points now. Exits 1 when a file fails to load.
+.TP
+.B pause
+Stop reacting to changes.
+.TP
+.B resume
+React to changes again. A change saved during the pause is loaded within one
+interval.
+.TP
+.B toggle
+Switch between paused and active.
+.TP
+.B status
+Print the state, the watcher's pid and the backend it uses.
+.TP
+.B doctor
+Print one row per dependency: tmux, the watcher tool, the desktop notifier,
+gum and
+the core tools. Exits 1 only when a required tool is missing.
+.TP
+.B version
+Print the version, then the tmux version.
+.TP
+.B help
+Print the help page.
+.SH OPTIONS
+.TP
+.B \-\-json
+.B status
+prints one JSON object.
+.TP
+.BI \-\-theme " name"
+Colours of the terminal interface:
+.BR kodougu ,
+.BR catppuccin\-mocha ,
+.BR catppuccin\-latte ,
+.BR dracula ,
+.BR nord ,
+.BR gruvbox ,
+.B tokyo\-night
+or
+.BR mono .
+The default is
+.BR kodougu .
+.TP
+.BI \-\- setting " value"
+Any tmux option below, named with dashes in place of underscores, such as
+.B \-\-interval 5
+or
+.BR "\-\-quiet 1" .
+An option given here outranks the environment and the tmux option.
+.PP
+Every option that takes a value also takes the form
+.IR \-\-option = value .
+.SH ENVIRONMENT
+.TP
+.BI AUTORELOAD_REVAMPED_ SETTING
+Any tmux option below in capitals, such as
+.BR AUTORELOAD_REVAMPED_INTERVAL .
+It outranks the tmux option.
+.TP
+.B AUTORELOAD_REVAMPED_THEME
+The theme when
+.B \-\-theme
+is not given.
+.TP
+.B AUTORELOAD_REVAMPED_ACCENT
+A colour such as #CBA6F7 that replaces the accent of the theme.
+.TP
+.B KODOUGU_THEME
+The theme of every kodougu and tmux-revamped tool, when neither
+.B \-\-theme
+nor
+.B AUTORELOAD_REVAMPED_THEME
+is set.
+.TP
+.B KODOUGU_ACCENT
+The accent of every kodougu and tmux-revamped tool, when
+.B AUTORELOAD_REVAMPED_ACCENT
+is not set.
+.TP
+.B NO_COLOR
+Turns colour off in every theme.
+.SH TMUX OPTIONS
+An empty tmux option means its default.
+.TP
+.B @autoreload_revamped_files
+Files to watch, separated by commas or spaces, with a leading ~ expanded. When
+set, it replaces the files tmux loaded. The default is empty.
+.TP
+.B @autoreload_revamped_entrypoints
+Files sourced on a reload, in the same form. The default is the config files
+tmux loaded.
+.TP
+.B @autoreload_revamped_interval
+Seconds between checks when no watcher tool is installed, and between retries
+of a reload that is held back or paused. The default is 2.
+.TP
+.B @autoreload_revamped_quiet
+1 hides the reload message. The default is 0.
+.TP
+.B @autoreload_revamped_discover
+Follow source and source\-file lines, up to 8 levels deep. 0 watches only the
+top\-level files. The default is 1.
+.TP
+.B @autoreload_revamped_atomic
+Also watch the folder of each file, so an editor that saves by renaming is
+caught. 0 watches the files only. The default is 1.
+.TP
+.B @autoreload_revamped_validate
+After a reload that fails, source the last copy of the failing file that
+loaded cleanly. 0 skips that. The default is 1.
+.TP
+.B @autoreload_revamped_defer
+Hold a reload back while any pane is in copy\-mode or another mode. 0 reloads
+at once. The default is 1.
+.TP
+.B @autoreload_revamped_selective
+1 sources only the entry points whose tree of sourced files holds the changed
+file. The default is 0.
+.TP
+.B @autoreload_revamped_flash
+1 repeats the reload message in reverse video. The default is 0.
+.TP
+.B @autoreload_revamped_notify
+1 sends a desktop notification on each reload. The default is 0.
+.TP
+.B @autoreload_revamped_backup_dir
+Folder that holds the last good copy of each entry point. The default is
+~/.tmux/autoreload\-revamped/backup.
+.TP
+.B @revamped_theme
+The theme of every tmux-revamped tool, when nothing else sets one. The default
+is
+.BR kodougu .
+.PP
+The plugin writes two options itself:
+.B @autoreload_revamped_pid
+holds the pid of the running watcher, and
+.B @autoreload_revamped_paused
+is 1 while paused.
+.SH FILES
+.TP
+.I ~/.tmux/autoreload\-revamped/backup
+The last good copy of each entry point, written when the watcher starts and
+after each reload that succeeds.
+.SH EXIT STATUS
+0 on success, 1 on any failure.
+.SH SEE ALSO
+.BR tmux (1),
+.BR fswatch (7),
+.BR inotifywait (1),
+.BR entr (1),
+.BR gum (1)

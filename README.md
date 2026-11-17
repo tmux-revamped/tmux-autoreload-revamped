@@ -4,167 +4,202 @@
 
 <strong>Edit your tmux config, save, and watch it reload itself, no key, no command.</strong>
 
-English | [日本語](README.ja.md) | [简体中文](README.zh-Hans.md) | [繁體中文（香港）](README.zh-HK.md)
+English &nbsp;|&nbsp; [日本語](README.ja.md) &nbsp;|&nbsp; [简体中文](README.zh-Hans.md) &nbsp;|&nbsp; [繁體中文（香港）](README.zh-HK.md)
 
-[![family](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/family.yml?branch=main&style=flat-square&label=family)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/family.yml)
-[![tests](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/tests.yml?branch=main&style=flat-square&label=tests)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/tests.yml)
+[![ci](https://img.shields.io/github/actions/workflow/status/tmux-revamped/tmux-autoreload-revamped/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/tmux-revamped/tmux-autoreload-revamped/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=release)](https://github.com/tmux-revamped/tmux-autoreload-revamped/releases/latest)
 [![openssf scorecard](https://img.shields.io/ossf-scorecard/github.com/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=openssf%20scorecard)](https://scorecard.dev/viewer/?uri=github.com/tmux-revamped/tmux-autoreload-revamped)
 [![license](https://img.shields.io/github/license/tmux-revamped/tmux-autoreload-revamped?style=flat-square&label=license)](LICENSE)
 
 <p align="center">
-  <a href="#what-it-does">What it does</a> |
-  <a href="#requirements">Requirements</a> |
-  <a href="#installation">Installation</a> |
-  <a href="#usage">Usage</a> |
-  <a href="#configuration">Configuration</a> |
-  <a href="#key-bindings">Key bindings</a> |
-  <a href="#how-it-works">How it works</a>
+  <a href="#quick-start"><strong>Quick start</strong></a> &nbsp;|&nbsp;
+  <a href="#usage">Usage</a> &nbsp;|&nbsp;
+  <a href="#how-it-works">How it works</a> &nbsp;|&nbsp;
+  <a href="#screens">Screens</a>
 </p>
 
 </div>
 
-**4** watcher backends. **12** options. **5** subcommands. CI runs the suite on **10** Linux and macOS toolchain combinations.
+<p align="center">
+  <img src="screens/hero.gif" alt="autoreload-revamped reloading a tmux config the moment it is saved, then reporting a broken save and keeping the last good copy" width="800">
+</p>
+
+```console
+$ echo 'set -g status-style bg=blue' >> ~/.tmux.conf
+$ autoreload-revamped status
+autoreload-revamped: active; watcher pid 48213; backend fswatch
+```
+
+The plugin watches every config file tmux loaded, plus every file those files `source`. When one is saved with different content, it sources your config again and shows `tmux config reloaded (tmux.conf)` in the status line. A save that changes no byte reloads nothing, a broken save shows tmux's error once and puts the last good copy back, and a change made while a pane is in copy-mode waits until the pane leaves it.
 
 ---
 
-## What it does
+## Quick start
 
-The plugin watches every config file tmux loaded, plus every file those files `source`. When one of them changes, it sources your config again and shows `tmux config reloaded (tmux.conf)` in the status line.
+### Prerequisites
 
-- A save that leaves the bytes unchanged does not reload, because the plugin compares a checksum of the content.
-- An edit with an error shows the failing file and the tmux error message, then sources the last copy of that file that loaded cleanly.
-- A change made while a pane is in copy-mode is held back, so a reload never interrupts a selection. The first check after every pane leaves its mode applies it: the next poll, or the next file event with a watcher tool.
-- One watcher runs per tmux server. Loading the plugin again reuses a live watcher and replaces a dead one.
+| Tool | Version | Used for |
+|:-----|:--------|:---------|
+| tmux | 3.2 or later | the family floor, and `#{config_files}`, which lists the loaded config files |
+| `fswatch`, `inotifywait` or `entr` | optional | a reload on the save itself; without one the plugin checks every `@autoreload_revamped_interval` seconds |
+| `osascript` or `notify-send` | optional | `@autoreload_revamped_notify` |
+| gum | optional | the menu, tables and colours of `autoreload-revamped`; without it every command prints plain text |
 
-## Requirements
-
-| Tool | Version | Needed for |
-|:-----|:--------|:-----------|
-| tmux | 3.2 or later | `#{config_files}`, which lists the loaded config files |
-| bash | 3.2 or later | every script, including macOS `/bin/bash` |
-| `fswatch`, `inotifywait` or `entr` | any | optional, event-driven reloads; without them the plugin polls |
-| `osascript` or `notify-send` | any | optional, desktop notifications |
-
-It runs on macOS and Linux, on x86_64 and arm64. File times are read with GNU `stat -c` first and BSD `stat -f` second, so it works with the macOS tools, GNU coreutils and uutils coreutils.
-
-## Installation
-
-### With TPM
-
-Add the plugin to `~/.tmux.conf`, then press `prefix + I`:
+### Install
 
 ```tmux
 set -g @plugin 'tmux-revamped/tmux-autoreload-revamped'
 ```
 
-### Manual
+Then press `prefix + I`. Without TPM, clone the repository and run its entry point from `~/.tmux.conf`:
 
 ```bash
 git clone https://github.com/tmux-revamped/tmux-autoreload-revamped ~/.tmux/plugins/tmux-autoreload-revamped
 ```
 
-Then add this line to `~/.tmux.conf` and reload tmux once:
-
 ```tmux
 run-shell ~/.tmux/plugins/tmux-autoreload-revamped/autoreload-revamped.tmux
 ```
 
-## Usage
+`make install` in the clone also puts `autoreload-revamped` in `~/.local/bin`, with its man page and completions under `~/.local/share`.
 
-Save `~/.tmux.conf`, or any file it sources. tmux applies it on the next file event, or within `@autoreload_revamped_interval` seconds when no watcher tool is installed.
-
-The script in [`src/autoreload.sh`](src/autoreload.sh) also takes subcommands:
-
-| Subcommand | Effect |
-|:-----------|:-------|
-| `reload` | source the entrypoints now |
-| `pause` | stop reacting to changes |
-| `resume` | react to changes again |
-| `toggle` | switch between paused and active |
-| `status` | print the state, the watcher pid and the backend |
+### Verify
 
 ```bash
-~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh status
+~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreload-revamped doctor
 ```
 
-```text
-autoreload-revamped: active; watcher pid 48213; backend fswatch
+## Usage
+
+Save `~/.tmux.conf`, or any file it sources. The plugin binds no key; bind a command yourself when you want one:
+
+```tmux
+bind-key <key> run-shell "~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreload-revamped toggle"
 ```
 
-## Configuration
+| Command | What it does |
+|:--------|:-------------|
+| `autoreload-revamped apply` | Starts the watcher, unless one is alive; the entry point runs it when tmux loads the plugin |
+| `autoreload-revamped watch` | Watches the config files until the tmux server ends; this is what `apply` leaves running |
+| `autoreload-revamped reload` | Sources the entry points now |
+| `autoreload-revamped pause` | Stops reacting to changes |
+| `autoreload-revamped resume` | Reacts to changes again; a save made during the pause is loaded within one interval |
+| `autoreload-revamped toggle` | Switches between paused and active |
+| `autoreload-revamped status` | Prints the state, the watcher's pid and its backend; `--json` prints one object |
+| `autoreload-revamped doctor` | One row per dependency, the watcher tool included |
+| `autoreload-revamped version` | The version, then the tmux version |
+| `autoreload-revamped help` | The help page; `man autoreload-revamped` documents the same commands and settings |
+| `autoreload-revamped` | On a terminal, a menu |
 
-| Option | Default | Meaning |
-|:-------|:--------|:--------|
-| `@autoreload_revamped_files` | empty | files to watch, comma or space separated, with `~` expanded; when set, it replaces the files tmux loaded |
-| `@autoreload_revamped_entrypoints` | the loaded config files | files sourced on each reload |
-| `@autoreload_revamped_interval` | `2` | seconds between checks when the plugin polls |
+| tmux option | Default | Meaning |
+|:------------|:--------|:--------|
+| `@autoreload_revamped_files` | none | Files to watch, separated by commas or spaces, with `~` expanded; when set, it replaces the files tmux loaded |
+| `@autoreload_revamped_entrypoints` | the loaded config files | Files sourced on a reload |
+| `@autoreload_revamped_interval` | `2` | Seconds between checks when no watcher tool is installed, and between retries of a reload that is held back or paused |
 | `@autoreload_revamped_quiet` | `0` | `1` hides the reload message |
-| `@autoreload_revamped_discover` | `1` | follows `source` and `source-file` lines, up to 8 levels deep; `0` watches only the top-level files |
-| `@autoreload_revamped_atomic` | `1` | also watches each file's directory, so an editor that saves by renaming is caught; `0` watches the files only |
-| `@autoreload_revamped_validate` | `1` | on a source error, sources the last good copy of the failing file; `0` skips the rollback |
-| `@autoreload_revamped_defer` | `1` | waits while any pane is in copy-mode or another mode; `0` reloads at once |
-| `@autoreload_revamped_selective` | `0` | `1` sources only the entrypoints whose include tree holds the changed file |
-| `@autoreload_revamped_backoff_max` | `30` | longest wait in seconds between polls after repeated failed reloads |
+| `@autoreload_revamped_discover` | `1` | Follows `source` and `source-file` lines, up to 8 levels deep; `0` watches only the top-level files |
+| `@autoreload_revamped_atomic` | `1` | Also watches each file's folder, so an editor that saves by renaming is caught; `0` watches the files only |
+| `@autoreload_revamped_validate` | `1` | After a reload that fails, sources the last good copy of the failing file; `0` skips that |
+| `@autoreload_revamped_defer` | `1` | Waits while any pane is in copy-mode or another mode; `0` reloads at once |
+| `@autoreload_revamped_selective` | `0` | `1` sources only the entry points whose tree of sourced files holds the changed file |
 | `@autoreload_revamped_flash` | `0` | `1` repeats the reload message in reverse video |
 | `@autoreload_revamped_notify` | `0` | `1` sends a desktop notification on each reload |
+| `@autoreload_revamped_backup_dir` | `~/.tmux/autoreload-revamped/backup` | Folder that holds the last good copy of each entry point |
 
-```tmux
-set -g @autoreload_revamped_files '~/.tmux.conf ~/.config/tmux/theme.conf'
-set -g @autoreload_revamped_notify '1'
-```
+Every option is also a command option with dashes, such as `--interval 5`, and an environment variable, such as `AUTORELOAD_REVAMPED_INTERVAL`; the command line wins over the environment, and the environment over the tmux option. An empty tmux option means its default. The plugin writes `@autoreload_revamped_pid` and `@autoreload_revamped_paused` itself.
 
-### Internal state
-
-The plugin writes these options itself. Do not set them.
-
-| Option | Holds |
-|:-------|:------|
-| `@autoreload_revamped_pid` | pid of the running watcher |
-| `@autoreload_revamped_paused` | `1` while paused, `0` otherwise |
-| `@autoreload_revamped_snapshot` | one `path mtime` line per watched file |
-| `@autoreload_revamped_hash` | checksum of the content of every watched file |
-| `@autoreload_revamped_fail_count` | failed reloads in a row, which lengthens the poll interval up to `@autoreload_revamped_backoff_max` |
-
-## Key bindings
-
-The plugin binds no key. To reload or pause from tmux, bind the subcommands yourself:
-
-```tmux
-bind R run-shell "~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh reload"
-bind P run-shell "~/.tmux/plugins/tmux-autoreload-revamped/src/autoreload.sh toggle"
-```
+<a id="how-it-works"></a>
 
 ## How it works
 
 ```mermaid
 graph LR
     Load[Plugin loads] --> Ensure[Start the watcher if none is alive]
-    Ensure --> Wait[Wait for a change]
-    Wait --> Diff[Compare mtimes and checksum]
+    Ensure --> Wait[Wait for a save]
+    Wait --> Diff[Compare checksums]
     Diff -->|unchanged| Wait
-    Diff -->|changed| Source[Source the entrypoints]
-    Source -->|error| Rollback[Show the error and source the last good copy]
+    Diff -->|changed| Source[Source the entry points]
+    Source -->|error| Rollback[Show the error once and source the last good copy]
     Source -->|ok| Announce[Show the reload message]
     Rollback --> Wait
     Announce --> Wait
 ```
 
-The watcher picks the first tool it finds, in this order: `fswatch`, `inotifywait`, `entr`, then a polling loop. The polling loop doubles its wait after each failed reload, up to `@autoreload_revamped_backoff_max` seconds.
+The watcher uses the first tool it finds, in this order: `fswatch`, `inotifywait`, `entr`; with none of them it checks every `@autoreload_revamped_interval` seconds. The checksum is one `cksum` run over every watched file.
 
-The watcher records the tmux server pid when it starts. It exits when that server is gone or a different server answers on the socket.
+The watcher records the tmux server's pid when it starts, and ends when that server is gone or a different server answers on the socket. One watcher runs per tmux server: loading the plugin again keeps a live watcher and replaces a dead one.
 
-Backups of the entrypoints live under `~/.tmux/autoreload-revamped/backup`. The watcher writes them when it starts and after each reload that succeeds. Set `AR_CACHE_DIR` in the environment to move them.
+The last good copy of each entry point lives under `~/.tmux/autoreload-revamped/backup`, written when the watcher starts and after each reload that succeeds. `@autoreload_revamped_backup_dir` moves it.
+
+<a id="screens"></a>
+
+## Screens
+
+<details>
+<summary>Every screen, recorded inside a real tmux with <code>make screens</code>, with each key on the status line</summary>
+<br>
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="screens/reload.png" alt="autoreload-revamped: A save reloads the config and says so in the status line"><br><sub>A save reloads the config and says so in the status line, from <code>hero.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/broken.png" alt="autoreload-revamped: A broken save shows tmux's error and keeps the last good copy"><br><sub>A broken save shows tmux's error and keeps the last good copy, from <code>hero.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/menu.png" alt="autoreload-revamped: The menu"><br><sub>The menu, from <code>hero.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/doctor.png" alt="autoreload-revamped: doctor"><br><sub><code>doctor</code>, from <code>hero.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/status.png" alt="autoreload-revamped: status"><br><sub><code>status</code>, from <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/paused.png" alt="autoreload-revamped: pause stops reacting to changes"><br><sub><code>pause</code> stops reacting to changes, from <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/plain-menu.png" alt="autoreload-revamped: The menu without gum"><br><sub>The menu without gum, from <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/plain-status.png" alt="autoreload-revamped: status from the menu"><br><sub><code>status</code> from the menu, from <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/version.png" alt="autoreload-revamped: The version"><br><sub>The version, from <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/error.png" alt="autoreload-revamped: An unknown command"><br><sub>An unknown command, from <code>stills.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/themes.png" alt="autoreload-revamped: The header in six themes"><br><sub>The header in six themes, from <code>themes.tape</code></sub></td>
+<td width="50%" valign="top"><img src="screens/help.png" alt="autoreload-revamped: The help page"><br><sub>The help page, from <code>help.tape</code></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="screens/accent.png" alt="autoreload-revamped: An accent from AUTORELOAD_REVAMPED_ACCENT"><br><sub>An accent from <code>AUTORELOAD_REVAMPED_ACCENT</code>, from <code>stills.tape</code></sub></td>
+<td width="50%" valign="top"></td>
+</tr>
+</table>
+
+</details>
+
+## Portability
+
+The plugin is POSIX `sh`. CI runs every suite on each row below.
+
+| Shell | Status |
+|:------|:-------|
+| `dash`, `/bin/sh` on macOS | Supported |
+| `bash` 3.2 and 5.x, the system's `zsh` and Homebrew's | Supported |
+
+| System | Status |
+|:-------|:-------|
+| macOS | Tahoe on Apple Silicon and Intel, with the tools it ships, Homebrew's GNU tools and Homebrew's uutils |
+| Linux | Ubuntu 26.04 on x86_64 and arm64, with GNU coreutils, uutils and BusyBox |
 
 ## Development
 
 | Command | What it runs |
 |:--------|:-------------|
-| `make test` | the bats suite under [`test/`](test) |
-| `make lint` | shellcheck on every shell file |
-| `make coverage` | kcov line coverage on Linux, failing below 95% |
+| `make fmt` | shfmt `-i 2` on every script |
+| `make lint` | shfmt, ShellCheck, mandoc, yamllint and actionlint, at zero findings |
+| `make test` | The bats suites under the system `sh` |
+| `make test-all` | The suites under every installed shell, both builds of bash and zsh on macOS |
+| `make test-linux` | The suites in an Ubuntu container |
+| `make coverage` | bashcov on this Mac and in the Ubuntu container, merged and gated at 100 percent |
+| `make screens` | The screens above, recorded from the real plugin inside tmux with VHS, on macOS |
+| `make install` | The command, its man page and completions under `PREFIX` |
 
-The pure functions for watcher selection, change detection and path handling are in [`src/lib/autoreload/autoreload.sh`](src/lib/autoreload/autoreload.sh).
+Commits follow the conventional commit format and go straight to `main`. After a green `ci` run on `main`, `release.yml` runs semantic-release: every `feat` or `fix` since the last tag publishes a release, stamps the version constant and adds the notes to [`CHANGELOG.md`](CHANGELOG.md).
 
 ## License
 

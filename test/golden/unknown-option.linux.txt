@@ -1,0 +1,3 @@
+$ autoreload-revamped --frobnicate
+autoreload-revamped: unknown option '--frobnicate'. run 'autoreload-revamped help' for usage.
+exit 1

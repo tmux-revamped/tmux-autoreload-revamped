@@ -1,0 +1,7 @@
+#!/bin/sh
+# shellcheck disable=SC2034
+
+[ -n "${AUTORELOAD_REVAMPED_CORE_LOADED:-}" ] && return 0
+AUTORELOAD_REVAMPED_CORE_LOADED=1
+
+readonly AUTORELOAD_REVAMPED_VERSION="1.1.1"
