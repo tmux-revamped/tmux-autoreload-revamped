@@ -51,13 +51,35 @@ load_plugin() {
   tmux run-shell "'${quoted}/autoreload-revamped.tmux'"
 }
 
+report() {
+  local pid file modes text
+  pid=$(tmux show-option -gqv @autoreload_revamped_pid 2>/dev/null) || pid=""
+  modes=$(tmux list-panes -a -F '#{pane_in_mode}' 2>/dev/null) || modes=""
+  printf 'waited for: %s\n' "$*"
+  printf 'watcher: %s\n' "${pid:-none}"
+  ps -o pid=,ppid=,stat=,etime=,command= -p "${pid:-0}" 2>/dev/null || printf 'the watcher is not running\n'
+  printf 'its children:\n'
+  pgrep -P "${pid:-0}" -l 2>/dev/null || printf 'none\n'
+  printf 'panes in a mode: %s\n' "${modes//$'\n'/ }"
+  printf 'options:\n'
+  tmux show-options -g 2>/dev/null | grep -e '^@autoreload' -e '^@x ' -e '^@y ' || :
+  printf 'messages:\n'
+  tmux show-messages 2>/dev/null | tail -n 8 || :
+  for file in "${CONF}"/*.conf; do
+    text=$(<"${file}")
+    printf '%s: %s\n' "${file##*/}" "${text//$'\n'/|}"
+  done
+}
+
 wait_for() {
   local delay
   for delay in 0.01 0.02 0.05 0.1 0.2 0.5 0.5 1 1 1 2 2 2; do
     "$@" && return 0
     sleep "${delay}"
   done
-  "$@"
+  "$@" && return 0
+  report "$@"
+  return 1
 }
 
 wait_long() {
@@ -66,7 +88,9 @@ wait_long() {
     "$@" && return 0
     sleep "${delay}"
   done
-  "$@"
+  "$@" && return 0
+  report "$@"
+  return 1
 }
 
 attached() {

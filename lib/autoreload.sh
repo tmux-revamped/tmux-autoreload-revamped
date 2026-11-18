@@ -331,7 +331,7 @@ autoreload_revamped_backend() {
 }
 
 autoreload_revamped_wait_fswatch() {
-  exec fswatch -1 -o "$@" >/dev/null 2>&1
+  exec fswatch -1 "$@" >/dev/null 2>&1
 }
 
 autoreload_revamped_wait_inotifywait() {

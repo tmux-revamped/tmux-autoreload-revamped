@@ -40,7 +40,7 @@ Guidance for anyone, human or agent, changing tmux-autoreload-revamped. What it 
 - The watched files are `@autoreload_revamped_files` when set, else the files tmux loaded, plus every file they `source` or `source-file`, followed up to 8 levels, each once, missing ones skipped.
 - A snapshot is one `cksum` run over every watched file. A change is a row that differs, so a save that changes no byte reloads nothing, and no modification time is read.
 - After a reload the watcher keeps the snapshot it loaded, never a fresh one, and takes a fresh row only for a file that just joined the list. A fresh snapshot would record a save made while the reload ran as already loaded.
-- The watcher uses the first tool it finds: `fswatch`, `inotifywait`, `entr`, then a check every `@autoreload_revamped_interval` seconds. With `@autoreload_revamped_atomic` on, the tool is also given each file's folder.
+- The watcher uses the first tool it finds: `fswatch`, `inotifywait`, `entr`, then a check every `@autoreload_revamped_interval` seconds. `fswatch` is run as `fswatch -1`, never with `-o`: fswatch 1.22 prints a count per batch with `-o` and never exits, so each save would wait for the guard. With `@autoreload_revamped_atomic` on, the tool is also given each file's folder.
 - An event backend starts its tool, compares the snapshot once more, and only then waits, because a save made before the tool was watching raises no event. A guard beside the tool checks every 5 seconds that the tmux server is alive and the snapshot unchanged, and ends the tool otherwise, so a watcher never outlives its server and a save the tool missed is loaded within that time.
 - `entr` exits with 2 when a folder it watches changes; that is a reason to check, never a failure. Any other failure of a tool waits one interval before the next round.
 - A reload held back by a pane in a mode, or by a pause, is checked again every interval on every backend, since no file event announces a pane leaving copy-mode.
@@ -51,7 +51,7 @@ Guidance for anyone, human or agent, changing tmux-autoreload-revamped. What it 
 
 - `AUTORELOAD_REVAMPED_VERSION` in [`lib/core.sh`](lib/core.sh) holds the version. Nobody edits it by hand.
 - After a green `ci` run on `main`, [`release.yml`](.github/workflows/release.yml) runs semantic-release: a `feat` or `fix` since the last tag publishes a release, [`set-version.sh`](.github/scripts/set-version.sh) stamps the constant, and the notes go into [`CHANGELOG.md`](CHANGELOG.md).
-- [`ci.yml`](.github/workflows/ci.yml) and [`test/linux-container.sh`](test/linux-container.sh) install `fswatch`, `inotify-tools` and `entr` on Linux and `fswatch` and `entr` on macOS, so [`test/backends.bats`](test/backends.bats) runs each tool for real there; on a machine without a tool its tests are skipped.
+- [`ci.yml`](.github/workflows/ci.yml) and [`test/linux-container.sh`](test/linux-container.sh) install `fswatch`, `inotify-tools` and `entr` on Linux and `fswatch` and `entr` on macOS, so [`test/backends.bats`](test/backends.bats) runs each tool for real there. A tool that is missing fails its tests instead of skipping them, so a local gate cannot pass with a backend untested; on macOS that means `brew install fswatch entr` first. Only `inotifywait` is skipped on macOS, where it does not exist.
 
 ## Gaps against FAMILY.md
 

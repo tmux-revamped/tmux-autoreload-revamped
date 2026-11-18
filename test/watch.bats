@@ -214,7 +214,7 @@ wait_for() {
   [[ "${output}" == "7 7 7" ]]
 }
 
-@test "watch - fswatch is given every file and folder, and its return means check now" {
+@test "watch - fswatch is asked for one event, with no batch flag, on every file and folder, and its return means check now" {
   # Arrange
   quiet_command sleep
   tool fswatch "printf '%s\n' \"\$@\" >'${BATS_TEST_TMPDIR}/tool.args'"
@@ -226,7 +226,7 @@ wait_for() {
   # Assert
   [[ "${output}" == "[0]" ]]
   run cat "${BATS_TEST_TMPDIR}/tool.args"
-  [[ "${output}" == $'-1\n-o\n/etc/a b.conf\n/etc' ]]
+  [[ "${output}" == $'-1\n/etc/a b.conf\n/etc' ]]
   run pauses
   [[ "${output}" == "0" ]]
 }

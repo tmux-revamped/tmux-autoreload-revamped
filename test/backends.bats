@@ -7,7 +7,12 @@ source "${BATS_TEST_DIRNAME:-.}/server_helpers.bash"
 bats_require_minimum_version 1.5.0
 
 needs() {
-  command -v "$1" >/dev/null 2>&1 || skip "$1 is not installed on this machine"
+  local system
+  ! command -v "$1" >/dev/null 2>&1 || return 0
+  system=$(uname -s)
+  [[ "${system}" == Darwin && "$1" == inotifywait ]] && skip "inotifywait is a Linux tool"
+  printf '%s is not installed, so this backend would go untested here. install it first.\n' "$1" >&2
+  return 1
 }
 
 no_tool() {
