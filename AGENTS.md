@@ -41,11 +41,11 @@ Guidance for anyone, human or agent, changing tmux-autoreload-revamped. What it 
 - A snapshot is one `cksum` run over every watched file. A change is a row that differs, so a save that changes no byte reloads nothing, and no modification time is read.
 - After a reload the watcher keeps the snapshot it loaded, never a fresh one, and takes a fresh row only for a file that just joined the list. A fresh snapshot would record a save made while the reload ran as already loaded.
 - The watcher uses the first tool it finds: `fswatch`, `inotifywait`, `entr`, then a check every `@autoreload_revamped_interval` seconds. `fswatch` is run as `fswatch -1`, never with `-o`: fswatch 1.22 prints a count per batch with `-o` and never exits, so each save would wait for the guard. With `@autoreload_revamped_atomic` on, the tool is also given each file's folder.
-- An event backend starts its tool, compares the snapshot once more, and only then waits, because a save made before the tool was watching raises no event. A guard beside the tool checks every 5 seconds that the tmux server is alive and the snapshot unchanged, and ends the tool otherwise, so a watcher never outlives its server and a save the tool missed is loaded within that time.
+- An event backend compares the snapshot first and starts its tool only when nothing changed, so a save made while a reload ran is loaded at once and no tool is started for it. The watcher never signals a tool it has just started: a signal that reaches a helper before it has become its program can be dropped, and the watcher would then wait on it forever. A guard beside the tool checks every 5 seconds that the tmux server is alive and the snapshot unchanged, and ends the tool otherwise, so a watcher never outlives its server and a save the tool missed is loaded within that time.
 - `entr` exits with 2 when a folder it watches changes; that is a reason to check, never a failure. Any other failure of a tool waits one interval before the next round.
 - A reload held back by a pane in a mode, or by a pause, is checked again every interval on every backend, since no file event announces a pane leaving copy-mode.
 - The watcher records the tmux server's pid when it starts and ends when a different server answers on the socket.
-- Stopping a tool or the guard is a `kill` followed by a `wait`, so the shell reports no ended job.
+- Stopping a tool or the guard after the tool ended is a `kill` followed by a `wait`, so the shell reports no ended job. A signal to the watcher itself sends one `kill` to each and exits without waiting.
 
 ## Release
 

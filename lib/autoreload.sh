@@ -371,14 +371,17 @@ autoreload_revamped_stop() {
   AUTORELOAD_REVAMPED_GUARD="" AUTORELOAD_REVAMPED_TOOL=""
 }
 
+autoreload_revamped_quit() {
+  [ -z "${AUTORELOAD_REVAMPED_GUARD}" ] || kill "${AUTORELOAD_REVAMPED_GUARD}" 2>/dev/null || :
+  [ -z "${AUTORELOAD_REVAMPED_TOOL}" ] || kill "${AUTORELOAD_REVAMPED_TOOL}" 2>/dev/null || :
+  exit 0
+}
+
 autoreload_revamped_block() {
+  autoreload_revamped_block_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_TRACKED}")
+  [ "${autoreload_revamped_block_now}" = "${AUTORELOAD_REVAMPED_SNAPSHOT}" ] || return 0
   autoreload_revamped_with "$2" "autoreload_revamped_wait_$1" </dev/null &
   AUTORELOAD_REVAMPED_TOOL=$!
-  autoreload_revamped_block_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_TRACKED}")
-  if [ "${autoreload_revamped_block_now}" != "${AUTORELOAD_REVAMPED_SNAPSHOT}" ]; then
-    autoreload_revamped_stop
-    return 0
-  fi
   autoreload_revamped_guard "${AUTORELOAD_REVAMPED_SERVER}" "${AUTORELOAD_REVAMPED_TOOL}" "${AUTORELOAD_REVAMPED_GUARD_SECONDS}" </dev/null >/dev/null 2>&1 &
   AUTORELOAD_REVAMPED_GUARD=$!
   autoreload_revamped_block_status=0
@@ -420,7 +423,7 @@ autoreload_revamped_watch() {
     autoreload_revamped_save "${autoreload_revamped_watch_entries}"
   fi
   autoreload_revamped_watch_backend=$(autoreload_revamped_backend)
-  trap 'autoreload_revamped_stop; exit 0' TERM INT HUP
+  trap 'autoreload_revamped_quit' TERM INT HUP
   while autoreload_revamped_step "${autoreload_revamped_watch_backend}"; do
     :
   done

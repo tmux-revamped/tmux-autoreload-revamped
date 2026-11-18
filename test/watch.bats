@@ -22,6 +22,10 @@ slept() {
   paste -sd ' ' "${BATS_TEST_TMPDIR}/sleep.calls" 2>/dev/null || :
 }
 
+ended() {
+  ! kill -0 "$1" 2>/dev/null
+}
+
 gone() {
   local pid
   [[ -f "${BATS_TEST_TMPDIR}/tool.pid" ]] || return 0
@@ -275,18 +279,36 @@ wait_for() {
   [[ "${output}" == "1" ]]
 }
 
-@test "watch - a save made before the tool was armed is caught at once, and the tool is stopped" {
+@test "watch - a save made before the tool starts is caught at once, and no tool is started" {
   # Arrange
   watching
   blocking_tool fswatch
-  local script='autoreload_revamped_track; AUTORELOAD_REVAMPED_SERVER=$$; printf "set -g @x 2\n" >"'"${WORK}"'/main.conf"; autoreload_revamped_wait fswatch; printf "[%s]" "$?"'
+  local script='autoreload_revamped_track; AUTORELOAD_REVAMPED_SERVER=$$; printf "set -g @x 2\n" >"'"${WORK}"'/main.conf"; autoreload_revamped_wait fswatch; printf "[%s][%s]" "$?" "${!:-0}"'
 
   # Act
   loaded "${script}"
 
   # Assert
-  [[ "${output}" == "[0]" ]]
-  wait_for gone
+  [[ "${output}" == "[0][0]" ]]
+}
+
+@test "watch - a signal stops the guard and the tool without waiting for them, and ends the watcher" {
+  # Arrange
+  local guard tool
+  local script='/bin/sleep 30 & AUTORELOAD_REVAMPED_GUARD=$!; /bin/sleep 30 & AUTORELOAD_REVAMPED_TOOL=$!; printf "%s %s\n" "${AUTORELOAD_REVAMPED_GUARD}" "${AUTORELOAD_REVAMPED_TOOL}" >"'"${BATS_TEST_TMPDIR}"'/pids"; autoreload_revamped_quit; printf "still here"'
+  loaded 'autoreload_revamped_quit; printf "still here"'
+  [[ "${status}" -eq 0 ]]
+  [[ -z "${output}" ]]
+
+  # Act
+  loaded "${script}"
+
+  # Assert
+  [[ "${status}" -eq 0 ]]
+  [[ -z "${output}" ]]
+  read -r guard tool <"${BATS_TEST_TMPDIR}/pids"
+  wait_for ended "${guard}"
+  wait_for ended "${tool}"
 }
 
 @test "watch - a save the tool never reported is caught by the next guard check" {
