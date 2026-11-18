@@ -181,8 +181,8 @@ autoreload_revamped_folders() {
 }
 
 autoreload_revamped_targets() {
-  printf '%s\n' "${AUTORELOAD_REVAMPED_FILES}"
-  [ "${AUTORELOAD_REVAMPED_S_atomic}" != 1 ] || printf '%s\n' "${AUTORELOAD_REVAMPED_FILES}" | autoreload_revamped_folders
+  printf '%s\n' "${AUTORELOAD_REVAMPED_TRACKED}"
+  [ "${AUTORELOAD_REVAMPED_S_atomic}" != 1 ] || printf '%s\n' "${AUTORELOAD_REVAMPED_TRACKED}" | autoreload_revamped_folders
 }
 
 autoreload_revamped_affected() {
@@ -276,13 +276,13 @@ autoreload_revamped_busy() {
 }
 
 autoreload_revamped_track() {
-  AUTORELOAD_REVAMPED_FILES=$(autoreload_revamped_files)
-  AUTORELOAD_REVAMPED_SNAPSHOT=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_FILES}")
+  AUTORELOAD_REVAMPED_TRACKED=$(autoreload_revamped_files)
+  AUTORELOAD_REVAMPED_SNAPSHOT=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_TRACKED}")
 }
 
 autoreload_revamped_settle() {
-  AUTORELOAD_REVAMPED_FILES=$(autoreload_revamped_files)
-  autoreload_revamped_settle_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_FILES}")
+  AUTORELOAD_REVAMPED_TRACKED=$(autoreload_revamped_files)
+  autoreload_revamped_settle_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_TRACKED}")
   AUTORELOAD_REVAMPED_SNAPSHOT=$(autoreload_revamped_rows loaded "$1" "${autoreload_revamped_settle_now}")
 }
 
@@ -302,7 +302,7 @@ autoreload_revamped_event() {
     AUTORELOAD_REVAMPED_HELD=1
     return 0
   fi
-  autoreload_revamped_event_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_FILES}")
+  autoreload_revamped_event_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_TRACKED}")
   [ "${autoreload_revamped_event_now}" != "${AUTORELOAD_REVAMPED_SNAPSHOT}" ] || return 0
   autoreload_revamped_event_changed=$(autoreload_revamped_changed "${AUTORELOAD_REVAMPED_SNAPSHOT}" "${autoreload_revamped_event_now}")
   if [ -n "${autoreload_revamped_event_changed}" ] && [ "${AUTORELOAD_REVAMPED_S_defer}" = 1 ] && autoreload_revamped_busy; then
@@ -353,7 +353,7 @@ autoreload_revamped_pause() {
 autoreload_revamped_guard() {
   while kill -0 "$1" 2>/dev/null && kill -0 "$2" 2>/dev/null; do
     sleep "$3"
-    autoreload_revamped_guard_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_FILES}")
+    autoreload_revamped_guard_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_TRACKED}")
     [ "${autoreload_revamped_guard_now}" = "${AUTORELOAD_REVAMPED_SNAPSHOT}" ] || break
   done
   kill "$2" 2>/dev/null || :
@@ -374,7 +374,7 @@ autoreload_revamped_stop() {
 autoreload_revamped_block() {
   autoreload_revamped_with "$2" "autoreload_revamped_wait_$1" </dev/null &
   AUTORELOAD_REVAMPED_TOOL=$!
-  autoreload_revamped_block_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_FILES}")
+  autoreload_revamped_block_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_TRACKED}")
   if [ "${autoreload_revamped_block_now}" != "${AUTORELOAD_REVAMPED_SNAPSHOT}" ]; then
     autoreload_revamped_stop
     return 0
@@ -384,7 +384,7 @@ autoreload_revamped_block() {
   autoreload_revamped_block_status=0
   wait "${AUTORELOAD_REVAMPED_TOOL}" || autoreload_revamped_block_status=$?
   autoreload_revamped_stop
-  autoreload_revamped_block_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_FILES}")
+  autoreload_revamped_block_now=$(autoreload_revamped_snapshot "${AUTORELOAD_REVAMPED_TRACKED}")
   [ "${autoreload_revamped_block_now}" = "${AUTORELOAD_REVAMPED_SNAPSHOT}" ] || return 0
   return "${autoreload_revamped_block_status}"
 }

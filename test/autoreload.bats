@@ -153,7 +153,7 @@ source "${BATS_TEST_DIRNAME:-.}/autoreload_helpers.bash"
 
 @test "autoreload - the watcher's targets are the files and their folders, or the files alone with atomic off" {
   # Arrange
-  local script='AUTORELOAD_REVAMPED_FILES=/etc/a.conf; autoreload_revamped_targets; AUTORELOAD_REVAMPED_S_atomic=0; autoreload_revamped_targets'
+  local script='AUTORELOAD_REVAMPED_TRACKED=/etc/a.conf; autoreload_revamped_targets; AUTORELOAD_REVAMPED_S_atomic=0; autoreload_revamped_targets'
 
   # Act
   lib_run autoreload "${script}"
@@ -362,4 +362,15 @@ source "${BATS_TEST_DIRNAME:-.}/autoreload_helpers.bash"
 
   # Assert
   [[ "${output}" == "9 1 1" ]]
+}
+
+@test "autoreload - a files setting given in the environment is the one the settings read" {
+  # Arrange
+  export AUTORELOAD_REVAMPED_FILES=/etc/extra.conf
+
+  # Act
+  lib_run autoreload 'autoreload_revamped_load; printf "[%s]\n" "${AUTORELOAD_REVAMPED_S_files}"'
+
+  # Assert
+  [[ "${output}" == "[/etc/extra.conf]" ]]
 }

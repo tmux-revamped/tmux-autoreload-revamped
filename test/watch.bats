@@ -81,7 +81,7 @@ wait_for() {
   conf main.conf 'set -g @x 1'
   conf sub.conf 'set -g @y 1'
   tmux_loads "$(printf '\t\t\t\t\t\t\t\t\t\t\t\t42\t\t\t%s' "${WORK}/main.conf")"
-  local script='autoreload_revamped_track; printf "source-file %s/sub.conf\n" "'"${WORK}"'" >"'"${WORK}"'/main.conf"; autoreload_revamped_event; autoreload_revamped_event; printf "%s\n" "${AUTORELOAD_REVAMPED_FILES}"'
+  local script='autoreload_revamped_track; printf "source-file %s/sub.conf\n" "'"${WORK}"'" >"'"${WORK}"'/main.conf"; autoreload_revamped_event; autoreload_revamped_event; printf "%s\n" "${AUTORELOAD_REVAMPED_TRACKED}"'
 
   # Act
   loaded "${script}"
@@ -141,7 +141,7 @@ wait_for() {
   watching
   conf extra.conf 'set -g @y 1'
   option files "${WORK}/main.conf ${WORK}/extra.conf"
-  local script='autoreload_revamped_track; rm -f "'"${WORK}"'/extra.conf"; autoreload_revamped_event; printf "%s" "${AUTORELOAD_REVAMPED_FILES}"'
+  local script='autoreload_revamped_track; rm -f "'"${WORK}"'/extra.conf"; autoreload_revamped_event; printf "%s" "${AUTORELOAD_REVAMPED_TRACKED}"'
 
   # Act
   loaded "${script}"
@@ -174,7 +174,7 @@ wait_for() {
   option files ""
   tmux_loads "$(printf '\t%s\t\t\t\t\t\t\t\t\t\t\t42\t\t\t%s' "${WORK}/main.conf" "${WORK}/main.conf")"
   conf new.conf 'set -g @y 1'
-  local script='autoreload_revamped_track; printf "source-file %s\n" "'"${WORK}"'/new.conf" >"'"${WORK}"'/main.conf"; autoreload_revamped_event; printf "%s" "${AUTORELOAD_REVAMPED_FILES}"'
+  local script='autoreload_revamped_track; printf "source-file %s\n" "'"${WORK}"'/new.conf" >"'"${WORK}"'/main.conf"; autoreload_revamped_event; printf "%s" "${AUTORELOAD_REVAMPED_TRACKED}"'
 
   # Act
   loaded "${script}"
@@ -204,7 +204,7 @@ wait_for() {
 @test "watch - polling, a held change or nothing to watch waits one interval" {
   # Arrange
   quiet_command sleep
-  local script='AUTORELOAD_REVAMPED_S_interval=7 AUTORELOAD_REVAMPED_FILES=/etc/a.conf; autoreload_revamped_wait poll; AUTORELOAD_REVAMPED_HELD=1; autoreload_revamped_wait fswatch; AUTORELOAD_REVAMPED_HELD=0 AUTORELOAD_REVAMPED_FILES=""; autoreload_revamped_wait fswatch'
+  local script='AUTORELOAD_REVAMPED_S_interval=7 AUTORELOAD_REVAMPED_TRACKED=/etc/a.conf; autoreload_revamped_wait poll; AUTORELOAD_REVAMPED_HELD=1; autoreload_revamped_wait fswatch; AUTORELOAD_REVAMPED_HELD=0 AUTORELOAD_REVAMPED_TRACKED=""; autoreload_revamped_wait fswatch'
 
   # Act
   lib_run autoreload "${script}"
@@ -218,7 +218,7 @@ wait_for() {
   # Arrange
   quiet_command sleep
   tool fswatch "printf '%s\n' \"\$@\" >'${BATS_TEST_TMPDIR}/tool.args'"
-  local script='AUTORELOAD_REVAMPED_SERVER=$$ AUTORELOAD_REVAMPED_S_interval=7 AUTORELOAD_REVAMPED_FILES="/etc/a b.conf"; autoreload_revamped_wait fswatch; printf "[%s]" "$?"'
+  local script='AUTORELOAD_REVAMPED_SERVER=$$ AUTORELOAD_REVAMPED_S_interval=7 AUTORELOAD_REVAMPED_TRACKED="/etc/a b.conf"; autoreload_revamped_wait fswatch; printf "[%s]" "$?"'
 
   # Act
   lib_run autoreload "${script}"
@@ -235,7 +235,7 @@ wait_for() {
   # Arrange
   quiet_command sleep
   tool inotifywait "printf '%s\n' \"\$@\" >'${BATS_TEST_TMPDIR}/tool.args'"
-  local script='AUTORELOAD_REVAMPED_SERVER=$$ AUTORELOAD_REVAMPED_S_atomic=0 AUTORELOAD_REVAMPED_FILES=/etc/a.conf; autoreload_revamped_wait inotifywait'
+  local script='AUTORELOAD_REVAMPED_SERVER=$$ AUTORELOAD_REVAMPED_S_atomic=0 AUTORELOAD_REVAMPED_TRACKED=/etc/a.conf; autoreload_revamped_wait inotifywait'
 
   # Act
   lib_run autoreload "${script}"
@@ -249,7 +249,7 @@ wait_for() {
   # Arrange
   quiet_command sleep
   tool entr "cat >'${BATS_TEST_TMPDIR}/tool.input'; printf '%s\n' \"\$@\" >'${BATS_TEST_TMPDIR}/tool.args'; exit 2"
-  local script='AUTORELOAD_REVAMPED_SERVER=$$ AUTORELOAD_REVAMPED_S_interval=7 AUTORELOAD_REVAMPED_S_atomic=0 AUTORELOAD_REVAMPED_FILES="/etc/a b.conf"; autoreload_revamped_wait entr'
+  local script='AUTORELOAD_REVAMPED_SERVER=$$ AUTORELOAD_REVAMPED_S_interval=7 AUTORELOAD_REVAMPED_S_atomic=0 AUTORELOAD_REVAMPED_TRACKED="/etc/a b.conf"; autoreload_revamped_wait entr'
 
   # Act
   lib_run autoreload "${script}"
@@ -265,7 +265,7 @@ wait_for() {
   # Arrange
   quiet_command sleep
   tool fswatch 'exit 3'
-  local script='AUTORELOAD_REVAMPED_SERVER=$$ AUTORELOAD_REVAMPED_S_interval=7 AUTORELOAD_REVAMPED_FILES=/etc/a.conf; autoreload_revamped_wait fswatch'
+  local script='AUTORELOAD_REVAMPED_SERVER=$$ AUTORELOAD_REVAMPED_S_interval=7 AUTORELOAD_REVAMPED_TRACKED=/etc/a.conf; autoreload_revamped_wait fswatch'
 
   # Act
   lib_run autoreload "${script}"
@@ -310,7 +310,7 @@ wait_for() {
   # Arrange
   watching
   quiet_command sleep
-  local script='AUTORELOAD_REVAMPED_FILES="'"${WORK}"'/main.conf" AUTORELOAD_REVAMPED_SNAPSHOT=stale; /bin/sleep 30 & tool=$!; autoreload_revamped_guard "$$" "${tool}" 3; code=0; wait "${tool}" 2>/dev/null || code=$?; printf "[%s]" "${code}"'
+  local script='AUTORELOAD_REVAMPED_TRACKED="'"${WORK}"'/main.conf" AUTORELOAD_REVAMPED_SNAPSHOT=stale; /bin/sleep 30 & tool=$!; autoreload_revamped_guard "$$" "${tool}" 3; code=0; wait "${tool}" 2>/dev/null || code=$?; printf "[%s]" "${code}"'
 
   # Act
   loaded "${script}"
@@ -358,7 +358,7 @@ wait_for() {
   tmux_loads ""
 
   # Act
-  lib_run autoreload 'autoreload_revamped_watch; printf "[%s]" "${AUTORELOAD_REVAMPED_FILES}"'
+  lib_run autoreload 'autoreload_revamped_watch; printf "[%s]" "${AUTORELOAD_REVAMPED_TRACKED}"'
 
   # Assert
   [[ "${output}" == "[]" ]]
