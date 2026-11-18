@@ -1,5 +1,29 @@
 # Changelog
 
+# [2.0.0](https://github.com/tmux-revamped/tmux-autoreload-revamped/compare/v1.1.1...v2.0.0) (2026-11-18)
+
+
+* feat!: rewrite the plugin in POSIX sh ([d0b7ff5](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/d0b7ff57c87f191800c0025587efc9060507e74b))
+
+
+### Bug Fixes
+
+* load a save made while a reload runs ([b97b048](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/b97b04803cb6ce754e96a47383fbba0c3d6b243a))
+* read the files setting from the environment ([06b6c04](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/06b6c046ddd441e97d2092a674fac9e6813d9c9d))
+* reload on the save itself with fswatch 1.22 ([67fe738](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/67fe738e9564271406ad2ca2f39ac31fe5bfd6ff))
+* stop counting some characters twice ([7a1f08f](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/7a1f08fb09ff2fff8965509b616365a812cdac70))
+
+
+### BREAKING CHANGES
+
+* the script moved from src/autoreload.sh to
+bin/autoreload-revamped, so a key bound to the old path needs the new
+one. The AR_CACHE_DIR variable is replaced by the option
+@autoreload_revamped_backup_dir. @autoreload_revamped_backoff_max is
+gone: a reload that fails shows its error once and is not retried
+until the file changes. @autoreload_revamped_snapshot, _hash and
+_fail_count are no longer written. bash is no longer required.
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
