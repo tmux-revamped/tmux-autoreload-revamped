@@ -199,6 +199,8 @@ The plugin is POSIX `sh`. CI runs every suite on each row below.
 | `make screens` | The screens above, recorded from the real plugin inside tmux with VHS, on macOS |
 | `make install` | The command, its man page and completions under `PREFIX` |
 
+On macOS, `brew bundle` installs every tool these targets call, from the [`Brewfile`](Brewfile).
+
 Commits follow the conventional commit format and go straight to `main`. After a green `ci` run on `main`, `release.yml` runs semantic-release: every `feat` or `fix` since the last tag publishes a release, stamps the version constant and adds the notes to [`CHANGELOG.md`](CHANGELOG.md).
 
 ## License
