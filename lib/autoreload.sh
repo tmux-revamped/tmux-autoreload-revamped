@@ -41,10 +41,14 @@ autoreload_revamped_resolve() {
   '
 }
 
+autoreload_revamped_setting_rows() {
+  autoreload_revamped_setting_rows_format=$(autoreload_revamped_format)
+  autoreload_revamped_setting_rows_live=$(tmux display-message -p "${autoreload_revamped_setting_rows_format}" 2>/dev/null) || autoreload_revamped_setting_rows_live=""
+  autoreload_revamped_resolve "${autoreload_revamped_setting_rows_live}"
+}
+
 autoreload_revamped_load() {
-  autoreload_revamped_load_format=$(autoreload_revamped_format)
-  autoreload_revamped_load_live=$(tmux display-message -p "${autoreload_revamped_load_format}" 2>/dev/null) || autoreload_revamped_load_live=""
-  autoreload_revamped_load_values=$(autoreload_revamped_resolve "${autoreload_revamped_load_live}")
+  autoreload_revamped_load_values=$(autoreload_revamped_setting_rows)
   while IFS='	' read -r autoreload_revamped_load_name autoreload_revamped_load_value; do
     IFS= read -r "AUTORELOAD_REVAMPED_S_${autoreload_revamped_load_name}" <<EOF
 ${autoreload_revamped_load_value}

@@ -106,7 +106,7 @@ bind-key <key> run-shell "~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreloa
 | `@autoreload_revamped_notify` | `0` | `1` は再読み込みのたびにデスクトップ通知を送ります |
 | `@autoreload_revamped_backup_dir` | `~/.tmux/autoreload-revamped/backup` | 各エントリーポイントの最後に正常だったコピーを置くフォルダー |
 
-どのオプションも、ダッシュ区切りのコマンドオプション（例 `--interval 5`）と環境変数（例 `AUTORELOAD_REVAMPED_INTERVAL`）で指定できます。優先順位はコマンドライン、環境変数、tmux オプションの順です。空の tmux オプションは既定値を意味します。`@autoreload_revamped_pid` と `@autoreload_revamped_paused` はプラグイン自身が書き込みます。
+どのオプションも、ダッシュ区切りのコマンドオプション（例 `--interval 5`）と環境変数（例 `AUTORELOAD_REVAMPED_INTERVAL`）で指定できます。優先順位はコマンドライン、環境変数、tmux オプションの順です。空の tmux オプションは既定値を意味します。`doctor` は、プラグインが認識できない値を持つ設定の名前を表示します。`@autoreload_revamped_pid` と `@autoreload_revamped_paused` はプラグイン自身が書き込みます。
 
 <a id="しくみ"></a>
 

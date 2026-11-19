@@ -126,10 +126,17 @@ autoreload_revamped_doctor_backend() {
   revamped_doctor_line watcher ok "${autoreload_revamped_doctor_backend_path}"
 }
 
+autoreload_revamped_doctor_settings() {
+  autoreload_revamped_doctor_settings_rows=$(autoreload_revamped_setting_rows)
+  # shellcheck disable=SC2154
+  revamped_doctor_settings "${AUTORELOAD_REVAMPED_KINDS}" "${autoreload_revamped_doctor_settings_rows}"
+}
+
 autoreload_revamped_doctor() {
   revamped_doctor_tmux
   autoreload_revamped_doctor_backend
   revamped_doctor_notifier
+  autoreload_revamped_doctor_settings
   revamped_doctor_gum
   revamped_doctor_core_tools awk sed tr cksum
   revamped_doctor_finish

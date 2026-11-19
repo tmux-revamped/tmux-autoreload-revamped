@@ -106,7 +106,7 @@ bind-key <key> run-shell "~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreloa
 | `@autoreload_revamped_notify` | `0` | `1` sends a desktop notification on each reload |
 | `@autoreload_revamped_backup_dir` | `~/.tmux/autoreload-revamped/backup` | Folder that holds the last good copy of each entry point |
 
-Every option is also a command option with dashes, such as `--interval 5`, and an environment variable, such as `AUTORELOAD_REVAMPED_INTERVAL`; the command line wins over the environment, and the environment over the tmux option. An empty tmux option means its default. The plugin writes `@autoreload_revamped_pid` and `@autoreload_revamped_paused` itself.
+Every option is also a command option with dashes, such as `--interval 5`, and an environment variable, such as `AUTORELOAD_REVAMPED_INTERVAL`; the command line wins over the environment, and the environment over the tmux option. An empty tmux option means its default. `doctor` names any setting that holds a value the plugin does not know. The plugin writes `@autoreload_revamped_pid` and `@autoreload_revamped_paused` itself.
 
 <a id="how-it-works"></a>
 

@@ -48,3 +48,12 @@ AUTORELOAD_REVAMPED_TOOL=""
 AUTORELOAD_REVAMPED_GUARD=""
 REVAMPED_LOG_NS=autoreload-revamped
 AUTORELOAD_REVAMPED_QUOTE="'"
+AUTORELOAD_REVAMPED_KINDS='interval	number 1
+quiet	1 0
+discover	1 0
+atomic	1 0
+validate	1 0
+defer	1 0
+selective	1 0
+flash	1 0
+notify	1 0'

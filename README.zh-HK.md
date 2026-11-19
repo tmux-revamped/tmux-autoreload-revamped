@@ -106,7 +106,7 @@ bind-key <key> run-shell "~/.tmux/plugins/tmux-autoreload-revamped/bin/autoreloa
 | `@autoreload_revamped_notify` | `0` | `1` 每次重新載入都發送桌面通知 |
 | `@autoreload_revamped_backup_dir` | `~/.tmux/autoreload-revamped/backup` | 存放每個入口檔案上一份正常副本的資料夾 |
 
-每個選項亦可以用帶連字號的命令選項（例如 `--interval 5`）和環境變數（例如 `AUTORELOAD_REVAMPED_INTERVAL`）設定；命令列優先於環境變數，環境變數優先於 tmux 選項。空的 tmux 選項表示預設值。`@autoreload_revamped_pid` 和 `@autoreload_revamped_paused` 由插件自己寫入。
+每個選項亦可以用帶連字號的命令選項（例如 `--interval 5`）和環境變數（例如 `AUTORELOAD_REVAMPED_INTERVAL`）設定；命令列優先於環境變數，環境變數優先於 tmux 選項。空的 tmux 選項表示預設值。`doctor` 會指出數值無法識別的設定。`@autoreload_revamped_pid` 和 `@autoreload_revamped_paused` 由插件自己寫入。
 
 <a id="運作原理"></a>
 

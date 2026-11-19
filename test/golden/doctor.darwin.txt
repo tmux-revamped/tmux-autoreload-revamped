@@ -2,6 +2,7 @@ $ autoreload-revamped doctor
 tmux               ok       <path>, 3.8
 watcher            warn     polling; fswatch, inotifywait or entr reloads on the save itself
 notifier           warn     no osascript or notify-send, so notifications stay in the status line
+settings           ok       every option holds a value it knows
 gum                ok       <path>
 awk                ok       <path>, <flavor>
 sed                ok       <path>, <flavor>
