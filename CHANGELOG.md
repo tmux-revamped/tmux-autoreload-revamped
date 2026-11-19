@@ -1,5 +1,19 @@
 # Changelog
 
+# [2.1.0](https://github.com/tmux-revamped/tmux-autoreload-revamped/compare/v2.0.0...v2.1.0) (2026-11-19)
+
+
+### Bug Fixes
+
+* fold a table wider than the terminal ([a3a7666](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/a3a7666bea14fb36fc41176d273b1e5dc36ea430))
+* read the grep of macOS as bsd in doctor ([bca70dd](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/bca70dd1875b89fa8a964f6625c72953b6a69d69))
+* stop a recording that hangs ([0976bdc](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/0976bdcff9c6d3600a92280e55bcdec67896bf66))
+
+
+### Features
+
+* name unknown setting values in doctor ([3f75282](https://github.com/tmux-revamped/tmux-autoreload-revamped/commit/3f7528283791a267c80922cc34d2d52791da4a03))
+
 # [2.0.0](https://github.com/tmux-revamped/tmux-autoreload-revamped/compare/v1.1.1...v2.0.0) (2026-11-18)
 
 
